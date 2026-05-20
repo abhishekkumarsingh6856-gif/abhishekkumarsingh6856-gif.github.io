@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARKETO — Buy & Sell Everything</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<!-- EmailJS SDK -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- Firebase App और Firestore SDKs v9 (Cloud Database) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0e0e0e; --cream: #f5f0e8; --accent: #e84c2b;
+    --gold: #c9a84c; --muted: #7a7570; --card-bg: #ffffff; --border: #e0dbd2;
+    --security-green: #1b8a5a;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2.5rem; background: var(--cream);
+    border-bottom: 1.5px solid var(--ink);
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: .08em; color: var(--ink); cursor: pointer;}
+  .logo span { color: var(--accent); }
+  .nav-cta { display: flex; gap: .75rem; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .6rem 1.4rem; font-size: .8rem; font-weight: 500;
+    letter-spacing: .06em; text-transform: uppercase;
+    border: 1.5px solid var(--ink); background: transparent;
+    cursor: pointer; text-decoration: none; color: var(--ink);
+    transition: background .2s, color .2s; font-family: 'DM Sans', sans-serif;
+  }
+  .btn:hover { background: var(--ink); color: var(--cream); }
+  .btn-fill { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-fill:hover { background: #c73a1f; border-color: #c73a1f; color: #fff; }
+  .btn-google { background: #fff; border-color: var(--border); color: var(--ink); }
+  .btn-google:hover { background: #f5f5f5; }
+
+  #user-info { display: none; align-items: center; gap: .75rem; }
+  #user-info.visible { display: flex; }
+  #user-avatar { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); object-fit: cover; }
+  #user-name { font-size: .82rem; font-weight: 500; }
+  #user-country { font-size: .75rem; background: var(--gold); color: #fff; padding: .1rem .4rem; border-radius: 3px; font-weight: bold; }
+
+  .hero { display: grid; grid-template-columns: 1fr 1fr; padding-top: 72px; min-height: 85vh; }
+  .hero-left { display: flex; flex-direction: column; justify-content: center; padding: 5rem 3rem 5rem 2.5rem; border-right: 1.5px solid var(--ink); }
+  .hero-tag { display: inline-block; font-size: .75rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; border: 1px solid var(--gold); color: var(--gold); padding: .35rem .8rem; margin-bottom: 2rem; width: fit-content; }
+  .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 8vw, 8rem); line-height: .95; }
+  .hero-title .line2 { color: var(--accent); }
+  .hero-sub { margin-top: 2rem; max-width: 420px; font-size: 1rem; font-weight: 300; line-height: 1.7; color: var(--muted); }
+
+  .hero-right { display: grid; grid-template-rows: 1fr 1fr; background: var(--ink); overflow: hidden; }
+  .hero-img-top { background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #333; font-size: 6rem; position: relative; overflow: hidden; }
+
+  .categories { padding: 4rem 2.5rem; border-bottom: 1.5px solid var(--ink); }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2.5rem; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; letter-spacing: .04em; }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; border: 1.5px solid var(--ink); background: var(--ink); }
+  .cat-card { background: var(--cream); padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: .75rem; cursor: pointer; transition: background .25s, color .25s; position: relative; overflow: hidden; }
+  .cat-card:hover { background: var(--ink); color: var(--cream); }
+  .cat-card.active-cat { background: var(--gold); color: #fff; }
+  .cat-card:hover .cat-arrow { opacity: 1; transform: translateX(0); }
+  .cat-icon { font-size: 2.5rem; line-height: 1; }
+  .cat-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: .04em; }
+  .cat-arrow { position: absolute; bottom: 1.5rem; right: 1.5rem; font-size: 1.2rem; opacity: 0; transform: translateX(-8px); transition: opacity .25s, transform .25s; }
+
+  .listings { padding: 4rem 2.5rem; border-bottom: 1.5px solid var(--ink); min-height: 400px;}
+  .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+  .listing-card { border: 1.5px solid var(--border); background: var(--card-bg); cursor: pointer; transition: border-color .2s, transform .2s, box-shadow .2s; display: flex; flex-direction: column; justify-content: space-between;}
+  .listing-card:hover { border-color: var(--ink); transform: translateY(-4px); box-shadow: 4px 4px 0 var(--ink); }
+  .listing-img { height: 200px; display: flex; align-items: center; justify-content: center; border-bottom: 1.5px solid var(--border); position: relative; overflow: hidden; background: #fafafa; }
+  .listing-img img { width: 100%; height: 100%; object-fit: cover; }
+  .listing-badge { position: absolute; top: .75rem; left: .75rem; font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; padding: .25rem .6rem; font-weight: 500; z-index: 2; background: var(--accent); color: #fff; }
+  
+  .listing-info { padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; }
+  .listing-name { font-weight: 500; font-size: 1.1rem; margin-bottom: .5rem; line-height: 1.3; color: var(--ink); }
+  .listing-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: .04em; color: var(--accent); margin: .5rem 0; }
+  
+  .details-box { background: #f9f7f2; border: 1px solid var(--border); padding: .6rem; margin-top: .5rem; border-radius: 3px; font-size: .8rem; }
+  .details-line { display: flex; margin-bottom: .3rem; align-items: center; gap: .3rem;}
+  .details-label { font-weight: bold; color: var(--ink); text-transform: uppercase; font-size: .65rem; width: 75px; display: inline-block;}
+  .details-val { color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  footer { background: var(--ink); color: var(--cream); padding: 3rem 2.5rem; border-top: 2px solid var(--ink); }
+  .footer-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2rem; max-width: 1400px; margin: 0 auto; }
+  .footer-brand .f-logo { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: .08em; }
+  .footer-brand .f-logo span { color: var(--accent); }
+  .footer-brand p { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+  
+  .founder-card { border-left: 3px solid var(--accent); padding-left: 1.2rem; }
+  .founder-tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 700; margin-bottom: 0.2rem; }
+  .founder-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 0.05em; color: #fff; line-height: 1; margin-bottom: 0.5rem; }
+  .founder-contact { display: flex; flex-direction: column; gap: 0.3rem; }
+  .founder-contact a { color: var(--cream); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; display: flex; align-items: center; gap: 0.5rem; }
+  .founder-contact a:hover { color: var(--accent); }
+
+  #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--ink); color: var(--cream); padding: .8rem 1.5rem; font-size: .85rem; border-radius: 2px; transition: transform .3s ease; z-index: 999; white-space: nowrap; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; display: none; align-items: center; justify-content: center; overflow-y: auto; padding: 2rem 0; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--cream); border: 1.5px solid var(--ink); padding: 2rem; width: 500px; max-width: 95vw; position: relative; margin: auto; }
+  .modal h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin-bottom: .2rem; }
+  .modal-sub { font-size: .85rem; color: var(--muted); margin-bottom: 1.2rem; }
+  .modal-close { position: absolute; top: 1rem; right: 1.25rem; font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--ink); z-index: 10; }
+  
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .form-group { margin-bottom: .85rem; }
+  .form-group label { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; color: var(--muted); font-weight: 500; }
+  .form-group input, .form-group select { width: 100%; padding: .65rem .8rem; border: 1.5px solid var(--ink); background: #fff; font-family: 'DM Sans', sans-serif; font-size: .85rem; outline: none; }
+  
+  .verify-container { background: #fff; border: 1px dashed var(--accent); padding: .75rem; margin-bottom: .85rem; border-radius: 4px; }
+  .verify-row { display: flex; gap: .5rem; margin-top: .25rem; }
+  .verify-row input { flex: 1; padding: .4rem; border: 1px solid var(--ink); font-size: .8rem; }
+
+  .view-img-box { width: 100%; height: 240px; border: 1.5px solid var(--ink); background: #fff; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .view-img-box img { width: 100%; height: 100%; object-fit: contain; }
+  .view-price { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--accent); margin-bottom: .5rem; }
+  .contact-btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: 1rem; }
+  .no-results { grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--muted); font-size: 1.1rem; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo" onclick="resetFilters()">MARK<span>E</span>TO</div>
+  <div class="nav-cta">
+    <button class="btn btn-google" id="sign-in-btn" onclick="signInWithGoogle()">Sign In</button>
+    <button class="btn btn-fill" onclick="openModal('sell')">List Item</button>
+    <div id="user-info">
+      <img id="user-avatar" src="" alt="avatar">
+      <span id="user-name"></span>
+      <span id="user-country">🌍 Global</span>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <span class="hero-tag">🟠 Cloud Database Engine Connected</span>
+    <h1 class="hero-title">SECURE<br><span class="line2">MARKET</span></h1>
+    <p class="hero-sub">Items are synced instantly across all users' devices in real-time via Google Firebase Cloud Firestore.</p>
+  </div>
+  <div class="hero-right"><div class="hero-img-top">🔒</div></div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="categories">
+  <div class="section-header"><h2 class="section-title">Browse Categories</h2></div>
+  <div class="cat-grid">
+    <div class="cat-card active-cat" id="cat-home" onclick="resetFilters()">
+      <div class="cat-icon">🏠</div><div class="cat-name">Home / All</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-Electronics" onclick="filterByCategory('Electronics')">
+      <div class="cat-icon">💻</div><div class="cat-name">Electronics</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-Fashion" onclick="filterByCategory('Fashion')">
+      <div class="cat-icon">👕</div><div class="cat-name">Fashion</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-Books" onclick="filterByCategory('Books & Study')">
+      <div class="cat-icon">📚</div><div class="cat-name">Books & Study</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-Gaming" onclick="filterByCategory('Gaming')">
+      <div class="cat-icon">🎮</div><div class="cat-name">Gaming</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-HomeLiving" onclick="filterByCategory('Home & Living')">
+      <div class="cat-icon">🛋️</div><div class="cat-name">Home & Living</div><div class="cat-arrow">→</div>
+    </div>
+    <div class="cat-card" id="cat-Sports" onclick="filterByCategory('Sports')">
+      <div class="cat-icon">⚽</div><div class="cat-name">Sports</div><div class="cat-arrow">→</div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTINGS -->
+<section class="listings" id="listings">
+  <div class="section-header"><h2 class="section-title" id="feed-title">All Verified Items</h2></div>
+  <div class="listings-grid" id="products-container"></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-container">
+    <div class="footer-brand">
+      <div class="f-logo">MARK<span>E</span>TO</div>
+      <p>© 2026 Marketo Platform. Cloud Engine Live Sync.</p>
+    </div>
+    <div class="founder-card">
+      <div class="founder-tag">Platform Founder</div>
+      <div class="founder-name">Abhishek Singh</div>
+      <div class="founder-contact">
+        <a href="mailto:abhishekkumarsingh6856@gmail.com">📧 abhishekkumarsingh6856@gmail.com</a>
+        <a href="tel:+918934833490">📞 +91 8934833490</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- MODAL: SELL -->
+<div class="modal-overlay" id="modal-sell" onclick="closeModalOutside(event,'modal-sell')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-sell')">✕</button>
+    <h2>List Verified Item</h2>
+    <p class="modal-sub">OTP code verification required to authenticate item layout</p>
+    
+    <div class="form-group"><label>Product Title</label><input type="text" id="prod-title" placeholder="Sony Headphones"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="prod-category">
+          <option>Electronics</option><option>Fashion</option><option>Books & Study</option>
+          <option>Gaming</option><option>Home & Living</option><option>Sports</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Price ($)</label><input type="number" id="prod-price" placeholder="150"></div>
+    </div>
+    <div class="form-group"><label>Image URL</label><input type="url" id="prod-img" placeholder="https://image-link.com"></div>
+
+    <div class="verify-container">
+      <div class="form-group">
+        <label>Step 1: Seller Email</label>
+        <div class="verify-row">
+          <input type="email" id="prod-email" placeholder="yourname@gmail.com">
+          <button class="btn btn-fill" style="padding:.2rem .6rem; font-size:.7rem;" id="btn-email-otp" onclick="sendEmailOTP()">Send OTP</button>
+        </div>
+        <div class="verify-row" id="row-email-conf" style="display:none;">
+          <input type="text" id="otp-email-input" placeholder="Enter Email OTP Code">
+          <button class="btn" style="padding:.2rem .6rem; font-size:.7rem;" onclick="verifyEmailOTP()">Verify</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top: .5rem;">
+        <label>Step 2: Seller Mobile Number</label>
+        <div class="verify-row">
+          <input type="tel" id="prod-phone" placeholder="+919876543210">
+          <button class="btn btn-fill" style="padding:.2rem .6rem; font-size:.7rem;" id="btn-phone-otp" onclick="sendPhoneOTP()">Send OTP</button>
+        </div>
+        <div class="verify-row" id="row-phone-conf" style="display:none;">
+          <input type="text" id="otp-phone-input" placeholder="Enter Mobile OTP Code">
+          <button class="btn" style="padding:.2rem .6rem; font-size:.7rem;" onclick="verifyPhoneOTP()">Verify</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Delivery</label><select id="prod-delivery"><option>Free Home Delivery</option><option>Local Pickup Only</option></select></div>
+      <div class="form-group"><label>Payment</label><select id="prod-payment"><option>Cash on Delivery (COD)</option><option>UPI / Wallet</option></select></div>
+    </div>
+    <button class="btn btn-fill" style="width:100%; padding:.9rem; justify-content: center; margin-top:.5rem;" id="btn-publish-listing" onclick="addNewProduct()" disabled>Complete Verification to Publish</button>
+  </div>
+</div>
+
+<!-- MODAL: VIEW DETAILS -->
+<div class="modal-overlay" id="modal-view" onclick="closeModalOutside(event,'modal-view')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-view')">✕</button>
+    <span id="view-badge" class="hero-tag">Category</span>
+    <h2 id="view-title">Product Title</h2>
+    <p id="view-seller" class="modal-sub">@seller</p>
+    <div class="view-img-box" id="view-img-container"></div>
+    <div id="view-price" class="view-price">$0</div>
+    
+    <div class="details-box">
+      <div class="details-line"><span class="details-label">📧 Email:</span><span id="view-email" class="details-val"></span></div>
+      <div class="details-line"><span class="details-label">📞 Phone:</span><span id="view-phone" class="details-val"></span></div>
+      <div class="details-line"><span class="details-label">🚚 Delivery:</span><span id="view-delivery" class="details-val" style="color: green; font-weight: bold;"></span></div>
+      <div class="details-line"><span class="details-label">💳 Payment:</span><span id="view-payment" class="details-val"></span></div>
+    </div>
+
+    <div class="contact-btn-group">
+      <button onclick="triggerRealEmail()" class="btn btn-fill" style="justify-content: center;">📧 Send Real Email</button>
+      <button onclick="triggerRealCall()" class="btn" style="justify-content: center;">📞 Connect Real Call</button>
+    </div>
+    <!-- DELETE LISTING SECURED BY OWNER VALIDATION -->
+    <button onclick="deleteProduct(currentActiveProduct.id)" class="btn" style="width: 100%; margin-top: 0.5rem; border-color: var(--accent); color: var(--accent); justify-content: center;">🗑️ Delete Listing Permanently</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // --- MARKETO WAF ENGINE CORE ---
+  const MarketoWAF = {
+    requestLog: {},
+    rules: { rateLimitMax: 5, rateLimitWindow: 60000, xssPatterns: /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>|javascript:|onerror|onload|eval\(/i },
+    inspectPayload: function(str) { return !this.rules.xssPatterns.test(str); },
+    checkRateLimit: function(id) {
+      const now = Date.now(); if (!this.requestLog[id]) this.requestLog[id] = [];
+      this.requestLog[id] = this.requestLog[id].filter(t => (now - t) < this.rules.rateLimitWindow);
+      if (this.requestLog[id].length >= this.rules.rateLimitMax) return false;
+      this.requestLog[id].push(now); return true;
+    },
+    sanitize: function(str) { if (typeof str !== 'string') return str; return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;"); }
+  };
+
+  // Your Dynamic Firebase Config Linked Successfully
+  const firebaseConfig = {
+    apiKey: "AIzaSyAAMy49Ee0yx6omozRWiM0N5ddxLq7tBj0",
+    authDomain: "marketo-faa36.firebaseapp.com",
+    projectId: "marketo-faa36",
+    storageBucket: "marketo-faa36.firebasestorage.app",
+    messagingSenderId: "487749936271",
+    appId: "1:487749936271:web:8f29bab5086c1369fe3cfa",
+    measurementId: "G-DRERGR3WGC"
+  };
+
+  // Initialize Firebase Cloud Connectors
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let globalProducts = [];
+  let currentActiveProduct = null;
+  let selectedCategoryFilter = null;
+  let generatedEmailOTP = null, generatedPhoneOTP = null, emailVerified = false, phoneVerified = false;
+
+  // Real-time Cloud Firestore Database Sync Listener
+  function listenToProducts() {
+    db.collection("products").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+      globalProducts = [];
+      snapshot.forEach((doc) => {
+        let data = doc.data();
+        data.id = doc.id; // Cloud Document Reference Binding
+        globalProducts.push(data);
+      });
+      renderProducts();
+    }, (error) => {
+      console.error("Firestore Dynamic Sync Failed: ", error);
+    });
+  }
+
+  function renderProducts() {
+    const container = document.getElementById('products-container');
+    container.innerHTML = '';
+    
+    const productsToDisplay = selectedCategoryFilter 
+      ? globalProducts.filter(p => p.category === selectedCategoryFilter)
+      : globalProducts;
+
+    if(productsToDisplay.length === 0) {
+      container.innerHTML = `<div class="no-results">📦 No items listed in this category yet!</div>`;
+      return;
+    }
+
+    productsToDisplay.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'listing-card';
+      card.setAttribute('onclick', `openProductDetails("${item.id}")`);
+      card.innerHTML = `
+        <div class="listing-img"><span class="listing-badge">${item.category}</span><img src="${item.img}"></div>
+        <div class="listing-info">
+          <div class="listing-name">${MarketoWAF.sanitize(item.name)}</div>
+          <div class="listing-price">$${item.price}</div>
+          <div class="details-box">
+            <div class="details-line"><span class="details-label">📧 Email:</span><span class="details-val">${MarketoWAF.sanitize(item.email)}</span></div>
+            <div class="details-line"><span class="details-label">📞 Phone:</span><span class="details-val">${MarketoWAF.sanitize(item.phone)}</span></div>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  // Deploys validated product straight onto the Firebase Production Database
+  function addNewProduct() {
+    const title = document.getElementById('prod-title').value.trim();
+    const price = document.getElementById('prod-price').value.trim();
+    const imgUrl = document.getElementById('prod-img').value.trim();
+    const email = document.getElementById('prod-email').value.trim();
+    const phone = document.getElementById('prod-phone').value.trim();
+
+    if(!MarketoWAF.inspectPayload(`${title} ${imgUrl} ${email} ${phone}`)) { alert("Malicious payload intercepted."); return; }
+
+    const newProduct = {
+      name: MarketoWAF.sanitize(title),
+      price: parseInt(price) || 0,
+      category: document.getElementById('prod-category').value,
+      img: imgUrl || 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500',
+      email: MarketoWAF.sanitize(email),
+      phone: MarketoWAF.sanitize(phone),
+      delivery: document.getElementById('prod-delivery').value,
+      payment: document.getElementById('prod-payment').value,
+      seller: '@live_verified_user',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection("products").add(newProduct)
+    .then(() => {
+      showToast('🚀 Product Synchronized Globally Across All Devices!');
+      closeModal('sell');
+      resetForm();
+    })
+    .catch((error) => { showToast('❌ Sync Failed: ' + error.message); });
+  }
+
+  // Secure Delete Architecture: Verifies listing ownership before deletion execution
+  function deleteProduct(docId) {
+    const ownerEmailPrompt = prompt("Security Check: Enter the Seller Email used during verification to confirm removal authority:");
+    if (!ownerEmailPrompt) return;
+
+    if (ownerEmailPrompt.trim() === currentActiveProduct.email) {
+      db.collection("products").doc(docId).delete()
+      .then(() => {
+        closeModal('view');
+        showToast('🗑️ Listing permanently destroyed from global cluster.');
+      })
+      .catch((error) => { showToast('❌ Action Rejected: ' + error.message); });
+    } else {
+      alert("🔒 Security Alert: Incorrect listing owner email credentials. Access Denied.");
+    }
+  }
+
+  function openProductDetails(id) {
+    const product = globalProducts.find(p => p.id === id);
+    if (!product) return;
+    currentActiveProduct = product;
+
+    document.getElementById('view-title').textContent = product.name;
+    document.getElementById('view-badge').textContent = product.category;
+    document.getElementById('view-seller').textContent = `Verified Seller ID: ${product.seller}`;
+    document.getElementById('view-price').textContent = `$${product.price}`;
+    document.getElementById('view-email').textContent = product.email;
+    document.getElementById('view-phone').textContent = product.phone;
+    document.getElementById('view-delivery').textContent = product.delivery;
+    document.getElementById('view-payment').textContent = product.payment;
+    document.getElementById('view-img-container').innerHTML = `<img src="${product.img}">`;
+
+    openModal('view');
+  }
+
+  // INTERFACE MANAGEMENT ROUTINES
+  function filterByCategory(categoryName) {
+    selectedCategoryFilter = categoryName;
+    document.getElementById('feed-title').textContent = `${categoryName} Feed`;
+    document.querySelectorAll('.cat-card').forEach(card => card.classList.remove('active-cat'));
+    let targetId = categoryName === 'Books & Study' ? 'cat-Books' : categoryName === 'Home & Living' ? 'cat-HomeLiving' : `cat-${categoryName}`;
+    const activeElement = document.getElementById(targetId);
+    if(activeElement) activeElement.classList.add('active-cat');
+    renderProducts();
+  }
+
+  function resetFilters() {
+    selectedCategoryFilter = null;
+    document.getElementById('feed-title').textContent = "All Verified Items";
+    document.querySelectorAll('.cat-card').forEach(card => card.classList.remove('active-cat'));
+    document.getElementById('cat-home').classList.add('active-cat');
+    renderProducts();
+  }
+
+  function resetForm() {
+    emailVerified = false; phoneVerified = false;
+    document.getElementById('btn-publish-listing').disabled = true;
+    document.getElementById('btn-publish-listing').style.background = "var(--accent)";
+    document.getElementById('btn-email-otp').textContent = "Send OTP"; document.getElementById('btn-email-otp').disabled = false;
+    document.getElementById('btn-phone-otp').textContent = "Send OTP"; document.getElementById('btn-phone-otp').disabled = false;
+    document.getElementById('prod-title').value = ''; document.getElementById('prod-price').value = ''; document.getElementById('prod-img').value = '';
+    document.getElementById('prod-email').value = ''; document.getElementById('prod-phone').value = '';
+  }
+
+  // OTP SIMULATOR CORE GATEWAYS
+  function sendEmailOTP() {
+    const email = document.getElementById('prod-email').value.trim();
+    if(!email) { showToast("⚠️ Enter email first!"); return; }
+    generatedEmailOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    alert(`[SANDBOX RUNTIME] Email Verification Token: ${generatedEmailOTP}`);
+    document.getElementById('row-email-conf').style.display = 'flex';
+  }
+  function verifyEmailOTP() {
+    if(document.getElementById('otp-email-input').value.trim() === generatedEmailOTP) {
+      emailVerified = true; showToast("✅ Identity Matrix Configured!");
+      document.getElementById('btn-email-otp').textContent = "Verified ✓"; document.getElementById('btn-email-otp').disabled = true;
+      document.getElementById('row-email-conf').style.display = 'none'; checkAllVerifications();
+    } else { showToast("❌ Invalid security token."); }
+  }
+  function sendPhoneOTP() {
+    const phone = document.getElementById('prod-phone').value.trim();
+    if(!phone) { showToast("⚠️ Enter valid phone format!"); return; }
+    generatedPhoneOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    alert(`[SANDBOX RUNTIME] Mobile SMS Gateway Token: ${generatedPhoneOTP}`);
+    document.getElementById('row-phone-conf').style.display = 'flex';
+  }
+  function verifyPhoneOTP() {
+    if(document.getElementById('otp-phone-input').value.trim() === generatedPhoneOTP) {
+      phoneVerified = true; showToast("✅ Mobile Endpoint Authenticated!");
+      document.getElementById('btn-phone-otp').textContent = "Verified ✓"; document.getElementById('btn-phone-otp').disabled = true;
+      document.getElementById('row-phone-conf').style.display = 'none'; checkAllVerifications();
+    } else { showToast("❌ Security validation token failure."); }
+  }
+  function checkAllVerifications() {
+    if(emailVerified && phoneVerified) {
+      document.getElementById('btn-publish-listing').disabled = false;
+      document.getElementById('btn-publish-listing').style.background = "var(--security-green)";
+    }
+  }
+
+  function triggerRealEmail() { window.location.href = `mailto:${currentActiveProduct.email}?subject=Marketo%20Deal&body=I%20am%20interested%20in%20your%20listing!`; }
+  function triggerRealCall() { window.location.href = `tel:${currentActiveProduct.phone}`; }
+  
+  function openModal(id) { document.getElementById('modal-' + id).classList.add('open'); }
+  function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
+  function closeModalOutside(e, id) { if (e.target === document.getElementById('modal-' + id)) closeModal(id); }
+  function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+  
+  // Start real-time database listener on initialization
+  window.onload = () => { listenToProducts(); };
+</script>
+</body>
+</html>
