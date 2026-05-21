@@ -11,6 +11,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -185,6 +187,7 @@
   .btn-phonepe { background: #5f259f; color: white; border-color: #5f259f; }
   .btn-gpay { background: #ffffff; color: #4285f4; border-color: #4285f4; }
   .btn-paytm { background: #00baf2; color: white; border-color: #00baf2; }
+  .btn-razorpay { background: #2b63e8; color: white; border-color: #2b63e8; }
 
   /* Settings Clear/Logout Setup Style */
   .settings-action-row { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.5rem; }
@@ -410,6 +413,9 @@
     </p>
 
     <div class="wallet-apps-box">
+      <button class="wallet-pay-btn btn-razorpay" onclick="triggerRazorpayPayment()">
+        💳 Pay via Razorpay (Cards/UPI/NetBanking)
+      </button>
       <button class="wallet-pay-btn btn-phonepe" onclick="triggerUPIIntent('phonepe')">
         📱 PhonePe Account
       </button>
@@ -454,9 +460,13 @@
 <div id="toast"></div>
 
 <script>
-  const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
-  const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
-  const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+  // EmailJS Configuration Setup
+  const EMAILJS_PUBLIC_KEY = "NMgSIsVW_aGiNARVn"; 
+  const EMAILJS_SERVICE_ID = "service_cf0zsj1";   // आपकी दी हुई Service ID यहाँ जोड़ दी गई है
+  const EMAILJS_TEMPLATE_ID = "template_tii047z"; // आपकी दी हुई Template ID यहाँ जोड़ दी गई है
+
+  // Razorpay Test ID Setup
+  const RAZORPAY_KEY_ID = "rzp_test_YOUR_KEY_HERE"; 
 
   let globalCurrencySymbol = localStorage.getItem('marketo_currency_symbol') || "$";
   let globalUserCountry = localStorage.getItem('marketo_user_country') || "Unknown";
@@ -503,7 +513,6 @@
     const query = document.getElementById('settings-feed-search').value.toLowerCase().trim();
     const container = document.getElementById('products-container');
     
-    // Filter standard items array
     const filtered = selectedCategoryFilter
       ? globalProducts.filter(p => p.category === selectedCategoryFilter && p.name.toLowerCase().includes(query))
       : globalProducts.filter(p => p.name.toLowerCase().includes(query));
@@ -533,19 +542,60 @@
 
   // 2. Real Deep-Linking UPI App Intent Activation
   function triggerUPIIntent(paymentAppLabel) {
-    // अपनी असली मर्चेंट/व्यक्तिगत UPI ID सेट करें (e.g., paymentreceiver@okaxis)
     const targetUpiAddress = "abhishekkumarsingh6856@okaxis"; 
     const businessName = "Marketo Store";
-    const baseTransactionAmount = "1.00"; // Default test amount
+    const baseTransactionAmount = "1.00"; 
     const narrativeText = "Wallet Account Verification";
 
-    // Standard cross-platform Intent string URI format
     const nativeUpiUrl = `upi://pay?pa=${targetUpiAddress}&pn=${encodeURIComponent(businessName)}&am=${baseTransactionAmount}&cu=INR&tn=${encodeURIComponent(narrativeText)}`;
 
     showToast(`Redirecting to ${paymentAppLabel}...`);
-    
-    // Direct browser redirect layer to wake up installed handset application handlers
     window.location.href = nativeUpiUrl;
+  }
+
+  // 3. Razorpay Gateway Popup Handler
+  function triggerRazorpayPayment() {
+    const user = auth.currentUser;
+    const testAmountInINR = 100; 
+
+    if (RAZORPAY_KEY_ID === "rzp_test_YOUR_KEY_HERE") {
+      alert("Please update RAZORPAY_KEY_ID variable inside script tags with your actual Razorpay Dashboard Key!");
+      return;
+    }
+
+    const options = {
+      "key": RAZORPAY_KEY_ID, 
+      "amount": (testAmountInINR).toString(), 
+      "currency": "INR",
+      "name": "MARKETO Platform",
+      "description": "Wallet Verification Gateway",
+      "image": user ? user.photoURL : "https://cdn-icons-png.flaticon.com/512/1161/1161388.png",
+      "handler": function (response) {
+        alert(`🎉 Payment Successful!\nTransaction ID: ${response.razorpay_payment_id}`);
+        showToast(`💰 Payment Received: ${response.razorpay_payment_id}`);
+        closeModal('wallet');
+      },
+      "prefill": {
+        "name": user ? user.displayName : "Guest User",
+        "email": user ? user.email : "guest@marketo.com",
+        "contact": "" 
+      },
+      "notes": {
+        "platform_owner": "Abhishek Singh"
+      },
+      "theme": {
+        "color": "#e84c2b" 
+      }
+    };
+
+    const rzpCheckoutInstance = new Razorpay(options);
+    
+    rzpCheckoutInstance.on('payment.failed', function (response){
+      alert(`❌ Payment Failed: ${response.error.description}`);
+      console.error(response.error);
+    });
+
+    rzpCheckoutInstance.open();
   }
 
   function signInWithGoogle() {
@@ -817,6 +867,7 @@
     }
   }
 
+  // 4. Deletion Key Panel Update
   function renderKeysVaultPanel() {
     const wrapper = document.getElementById('keys-vault-wrapper');
     wrapper.innerHTML = '';
@@ -848,6 +899,7 @@
     });
   }
 
+  // 5. Copy Verification Handler
   function copySecurityKey(textValue) {
     navigator.clipboard.writeText(textValue).then(() => { showToast('📋 Copied!'); });
   }
@@ -914,7 +966,7 @@
   }
 
   function sendRealEmailNotification(targetSellerEmail, orderId, productNames, deliveryLocation) {
-    if(EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") return;
+    if(EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY" || EMAILJS_SERVICE_ID === "YOUR_SERVICE_ID") return;
     const templateParameters = {
       to_email: targetSellerEmail,
       order_id: orderId,
@@ -1032,17 +1084,56 @@
     renderProducts();
   }
 
+  // Real Real-time OTP integration using EmailJS
   function sendEmailOTP() {
+    const targetEmail = document.getElementById('prod-email').value.trim();
+    if (!targetEmail) { alert("Please enter an email address first."); return; }
+    
+    // Generate 6 Digit Code
     generatedEmailOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    alert(`[Sandbox] Email OTP: ${generatedEmailOTP}`);
-    document.getElementById('row-email-conf').style.display = 'flex';
+
+    // Owner Bypass Check
+    if (targetEmail.toLowerCase() === 'abhishekkumarsingh6856@gmail.com') {
+      checkOwnerBypass();
+      return;
+    }
+
+    if (EMAILJS_SERVICE_ID === "YOUR_SERVICE_ID" || EMAILJS_TEMPLATE_ID === "YOUR_TEMPLATE_ID") {
+      console.warn("EmailJS Configuration variables missing.");
+      alert(`[Sandbox Mode] Email OTP Sent to ${targetEmail}: ${generatedEmailOTP}`);
+      document.getElementById('row-email-conf').style.display = 'flex';
+      return;
+    }
+
+    showToast("Sending verification OTP...");
+
+    // EmailJS payload structure mapping parameters
+    const otpPayload = {
+      to_email: targetEmail,
+      otp_code: generatedEmailOTP,
+      platform_name: "Marketo Platform"
+    };
+
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, otpPayload)
+    .then(() => {
+      showToast("📩 OTP sent successfully!");
+      document.getElementById('row-email-conf').style.display = 'flex';
+    })
+    .catch((error) => {
+      console.error("EmailJS Failed:", error);
+      alert("Failed to send real OTP. Falling back to Sandbox Mode for testing.\nOTP Code is: " + generatedEmailOTP);
+      document.getElementById('row-email-conf').style.display = 'flex';
+    });
   }
+
   function verifyEmailOTP() {
     if(document.getElementById('otp-email-input').value.trim() === generatedEmailOTP) {
       emailVerified = true; showToast("✅ Email Verified!");
       document.getElementById('btn-email-otp').textContent = "Verified";
       document.getElementById('row-email-conf').style.display = 'none';
       checkAllVerifications();
+    } else {
+      alert("❌ Invalid OTP. Access Denied.");
     }
   }
 
@@ -1086,7 +1177,7 @@
     if (id === 'keys') renderKeysVaultPanel();
     if (id === 'settings') {
       updateSettingsDisplayFields();
-      document.getElementById('settings-feed-search').value = ''; // Clean box state on open
+      document.getElementById('settings-feed-search').value = ''; 
     }
     document.getElementById('modal-' + id).classList.add('open');
   }
