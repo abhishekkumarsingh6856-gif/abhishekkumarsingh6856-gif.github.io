@@ -1638,9 +1638,13 @@
 
 
         /* ============ FINAL PREMIUM PATCH ============ */
-        .splash-screen { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:#000; }
-        .splash-logo { font-size:48px; font-weight:950; letter-spacing:-2px; background:var(--primary-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; animation:splashPulse 1.1s ease-in-out infinite alternate; }
-        @keyframes splashPulse { from{transform:scale(.96);filter:drop-shadow(0 0 0 rgba(225,48,108,0))} to{transform:scale(1.05);filter:drop-shadow(0 0 28px rgba(225,48,108,.55))} }
+        .splash-screen { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:#000; overflow:hidden; }
+        .splash-screen::before { content:''; position:absolute; inset:-20%; background:radial-gradient(circle,rgba(229,9,20,.28),transparent 34%),linear-gradient(90deg,transparent,rgba(229,9,20,.1),transparent); animation:netflixRays 3s ease forwards; }
+        .splash-logo { position:relative; font-size:clamp(46px,12vw,118px); font-weight:1000; letter-spacing:.08em; color:#e50914; text-shadow:0 0 18px rgba(229,9,20,.8),0 0 70px rgba(229,9,20,.38); transform:scale(.55); opacity:0; animation:netflixLogo 3s cubic-bezier(.2,.9,.2,1) forwards; }
+        .splash-logo::after { content:''; position:absolute; left:50%; top:50%; width:2px; height:120%; background:#e50914; transform:translate(-50%,-50%) scaleY(0); filter:blur(.4px); animation:netflixSlash 3s ease forwards; }
+        @keyframes netflixLogo { 0%{opacity:0;transform:scale(.45);letter-spacing:.35em;filter:blur(12px)} 18%{opacity:1;filter:blur(0)} 55%{transform:scale(1);letter-spacing:.08em} 82%{transform:scale(1.06);opacity:1} 100%{transform:scale(1.35);opacity:0;filter:blur(8px)} }
+        @keyframes netflixSlash { 0%,18%{transform:translate(-50%,-50%) scaleY(0);opacity:0} 35%{transform:translate(-50%,-50%) scaleY(1);opacity:.85} 65%,100%{opacity:0} }
+        @keyframes netflixRays { 0%{transform:scale(.8);opacity:0} 25%{opacity:1} 100%{transform:scale(1.5);opacity:0} }
         .otp-card { background:linear-gradient(180deg,#161616,#080808); border:1px solid rgba(255,255,255,.14); border-radius:22px; padding:24px; width:min(420px,92vw); box-shadow:0 30px 100px rgba(0,0,0,.7); text-align:center; }
         .otp-code-box { font-size:30px; letter-spacing:8px; font-weight:950; padding:14px; border-radius:16px; background:rgba(0,149,246,.12); border:1px solid rgba(0,149,246,.35); margin:14px 0; }
         .otp-card input { width:100%; padding:14px; border-radius:12px; border:1px solid var(--border); background:#050505; color:#fff; text-align:center; letter-spacing:6px; font-size:20px; outline:none; }
@@ -1659,10 +1663,35 @@
         .history-item { padding:10px 0; border-bottom:1px solid var(--border); color:var(--text-secondary); font-size:13px; }
         .switch-account-card { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); border-radius:12px; margin:8px 0; background:var(--bg-secondary); }
         .switch-account-card img { width:42px; height:42px; border-radius:50%; }
+
+        .chat-media-preview { max-width:min(260px,70vw); max-height:320px; border-radius:14px; display:block; margin-bottom:6px; object-fit:cover; background:#000; }
+        .call-status-live { color:#58c322!important; font-weight:900; }
+
+
+        /* ============ NETFLIX-STYLE CHATGRAM INTRO V2 + LARGE STORAGE ============ */
+        .splash-screen { background:#000!important; perspective:900px; }
+        .splash-logo { display:none!important; }
+        .netflix-intro { position:relative; width:min(92vw,720px); height:320px; display:flex; flex-direction:column; align-items:center; justify-content:center; animation:introExit 3s ease forwards; }
+        .netflix-n { position:relative; width:104px; height:188px; margin-bottom:30px; transform:scale(.7); animation:nZoom 3s cubic-bezier(.16,.84,.28,1) forwards; filter:drop-shadow(0 0 28px rgba(229,9,20,.9)); }
+        .netflix-n span { position:absolute; top:0; height:100%; width:31px; background:#e50914; box-shadow:0 0 22px rgba(229,9,20,.65); }
+        .netflix-n span:nth-child(1){ left:0; transform-origin:bottom; animation:nLeft 3s ease forwards; }
+        .netflix-n span:nth-child(2){ left:36px; width:34px; transform:skewX(-20deg) scaleY(0); transform-origin:bottom; background:linear-gradient(90deg,#b00610,#ff1423,#7b0208); animation:nMiddle 3s ease forwards; z-index:2; }
+        .netflix-n span:nth-child(3){ right:0; transform-origin:bottom; animation:nRight 3s ease forwards; }
+        .netflix-word { color:#e50914; font-size:clamp(36px,9vw,88px); font-weight:1000; letter-spacing:.18em; opacity:0; transform:scale(.82); text-shadow:0 0 20px rgba(229,9,20,.7),0 0 80px rgba(229,9,20,.35); animation:wordReveal 3s ease forwards; }
+        .netflix-light { position:absolute; inset:auto 0 10px 0; height:3px; background:linear-gradient(90deg,transparent,#e50914,transparent); transform:scaleX(0); filter:blur(.4px); animation:lightSweep 3s ease forwards; }
+        @keyframes nLeft { 0%{transform:scaleY(0);opacity:0} 12%{opacity:1} 30%,100%{transform:scaleY(1);opacity:1} }
+        @keyframes nMiddle { 0%,25%{transform:skewX(-20deg) scaleY(0);opacity:0} 44%,100%{transform:skewX(-20deg) scaleY(1);opacity:1} }
+        @keyframes nRight { 0%,38%{transform:scaleY(0);opacity:0} 58%,100%{transform:scaleY(1);opacity:1} }
+        @keyframes nZoom { 0%{transform:scale(.55) translateZ(-260px);opacity:0} 18%{opacity:1} 62%{transform:scale(.9) translateZ(0)} 82%{transform:scale(1.08)} 100%{transform:scale(1.55);opacity:0;filter:blur(10px)} }
+        @keyframes wordReveal { 0%,50%{opacity:0;letter-spacing:.45em;filter:blur(10px)} 66%{opacity:1;filter:blur(0)} 84%{opacity:1;transform:scale(1);letter-spacing:.16em} 100%{opacity:0;transform:scale(1.25);filter:blur(8px)} }
+        @keyframes lightSweep { 0%,50%{transform:scaleX(0);opacity:0} 67%{transform:scaleX(1);opacity:1} 100%{transform:scaleX(0);opacity:0} }
+        @keyframes introExit { 0%,82%{opacity:1} 100%{opacity:0} }
+        .storage-meter { height:10px; border-radius:999px; background:#222; overflow:hidden; margin-top:10px; }
+        .storage-meter span { display:block; height:100%; background:linear-gradient(90deg,#0095f6,#58c322); width:0%; }
     </style>
 </head>
 <body>
-    <div id="splashScreen" class="splash-screen"><div class="splash-logo">Chatgram</div></div>
+    <div id="splashScreen" class="splash-screen"><div class="netflix-intro"><div class="netflix-n"><span></span><span></span><span></span></div><div class="netflix-word">CHATGRAM</div><div class="netflix-light"></div></div></div>
     <div id="pullIndicator" class="pull-indicator">Release to refresh</div>
     <div id="announcementBar" class="announcement-bar" style="display:none"></div>
     <!-- ============ AUTH SCREENS ============ -->
@@ -1958,6 +1987,70 @@
         <div class="ai-input"><input id="aiChatInput" placeholder="Ask Tronix..." onkeypress="if(event.key==='Enter')sendAIChat()"><button onclick="sendAIChat()">Send</button></div>
     </div>
 
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnxk3MXnnsb-hlCFt4ElLOGHQPu0b8BdQ",
+            authDomain: "chatgram-4f3bc.firebaseapp.com",
+            projectId: "chatgram-4f3bc",
+            storageBucket: "chatgram-4f3bc.firebasestorage.app",
+            messagingSenderId: "606039291571",
+            appId: "1:606039291571:web:3978cb3d01a164561462c6",
+            measurementId: "G-3CGYHY2247"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        try { if (await analyticsSupported()) getAnalytics(app); } catch (e) { console.warn('Analytics unavailable', e); }
+        const auth = getAuth(app);
+        auth.languageCode = 'en';
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        function normalizeFirebaseUser(user) {
+            return {
+                uid: user.uid,
+                email: (user.email || '').toLowerCase(),
+                displayName: user.displayName || (user.email || '').split('@')[0] || 'Google User',
+                photoURL: user.photoURL || '',
+                provider: 'firebase-google'
+            };
+        }
+
+        window.chatgramFirebaseReady = true;
+        window.chatgramFirebaseSignIn = async function() {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                return normalizeFirebaseUser(result.user);
+            } catch (err) {
+                // Some mobile webviews block popups. Redirect fallback is available.
+                if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(err.code)) {
+                    const useRedirect = confirm('Popup blocked/closed. Use Google redirect sign-in?');
+                    if (useRedirect) {
+                        await signInWithRedirect(auth, provider);
+                        return null;
+                    }
+                }
+                throw err;
+            }
+        };
+        window.chatgramFirebaseSignOut = async function(){ try { await auth.signOut(); } catch(e) {} };
+
+        getRedirectResult(auth).then(result => {
+            if (result?.user) {
+                const detail = normalizeFirebaseUser(result.user);
+                window.dispatchEvent(new CustomEvent('chatgram-firebase-user', { detail }));
+            }
+        }).catch(err => console.warn('Firebase redirect result error', err));
+
+        onAuthStateChanged(auth, user => {
+            if (user) window.chatgramLastFirebaseUser = normalizeFirebaseUser(user);
+        });
+    </script>
+
     <script>
         // ============ REAL LOCAL DATA STORE ============
         const DB_KEY = 'chatgram_real_state_v3';
@@ -1980,7 +2073,8 @@
             usedOtps: {},
             otpSerial: 0,
             history: [],
-            deletedUsers: []
+            deletedUsers: [],
+            largeStorageMode: false
         };
 
         let selectedMedia = null;
@@ -2065,6 +2159,7 @@
             state.otpSerial = Number(state.otpSerial || 0);
             state.history = Array.isArray(state.history) ? state.history : [];
             state.deletedUsers = Array.isArray(state.deletedUsers) ? state.deletedUsers : [];
+            state.largeStorageMode = !!state.largeStorageMode;
             state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
             Object.keys(state.threads).forEach(k => { state.threads[k] = (state.threads[k] || []).map(m => ({...m, createdAt:m.createdAt||m.id||Date.now()})); });
             state.users.forEach(u => {
@@ -2144,6 +2239,12 @@
         function threadKey(a,b){ return [Number(a),Number(b)].sort((x,y)=>x-y).join('_'); }
         function getThreadWith(userId){ const me=getCurrentUser(); if(!me)return []; const key=threadKey(me.id,userId); state.threads[key] ||= []; return state.threads[key]; }
         function logHistory(action){ state.history ||= []; state.history.unshift({id:Date.now(), action, time:new Date().toLocaleString(), user:getCurrentUser()?.username||'guest'}); state.history=state.history.slice(0,100); }
+        function renderMessageMedia(m){
+            const src = m.mediaKey ? (mediaCache[m.mediaKey] || '') : (m.media || '');
+            if(!src && m.mediaKey){ loadMediaBlobUrl(m.mediaKey).then(()=>{ if(state.currentPage==='messages' && state.activeChat) openChat(state.activeChat); }); return '<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">Loading large media...</div>'; }
+            if(!src) return '';
+            return m.mediaType==='video' ? `<video class="chat-media-preview" src="${src}" controls playsinline></video>` : `<img class="chat-media-preview" src="${src}" alt="shared media">`;
+        }
         function firewallText(v){ v=String(v||''); if(/[<>]|javascript:/i.test(v)) throw new Error('Firewall blocked unsafe input'); return v.slice(0,2000); }
         function hashTo6(input){
             let h = 2166136261;
@@ -2234,28 +2335,52 @@
         function googleNameFromEmail(email){
             return String(email||'').split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()) || 'Google User';
         }
-        async function handleGoogleSignIn(){
-            const email = prompt('Google Sign-In (sandbox)\nEnter your Gmail address:');
-            if(!email) return;
-            const cleanEmail = email.trim().toLowerCase();
-            if(!/^[^@\s]+@gmail\.com$/.test(cleanEmail)) return alert('Please enter a valid Gmail address.');
-            if(!await verifySandboxOTP(cleanEmail)) return alert('Wrong sandbox OTP.');
+        function finishGoogleAuth(cleanEmail, displayName='', photoURL='', firebaseUid=''){
+            if(!cleanEmail) return alert('Google did not return an email.');
             let user = state.users.find(u => u.email === cleanEmail);
             if(user?.isBanned) return alert('This account is banned by owner.');
             if(!user){
                 let base = cleanUsername(cleanEmail.split('@')[0]) || 'google_user';
                 let username = base, n = 1;
                 while(state.users.some(u => u.username === username)) username = (base + n++).slice(0,30);
-                user = { id: Date.now(), username, fullName: googleNameFromEmail(cleanEmail), email: cleanEmail, password:'', avatar: avatarFor(username), bio:'✨ Signed in with Google', isOwner: cleanEmail===OWNER_EMAIL, isVip: cleanEmail===OWNER_EMAIL, isVerified: cleanEmail===OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
+                user = { id: Date.now(), username, fullName: displayName || googleNameFromEmail(cleanEmail), email: cleanEmail, password:'', firebaseUid, avatar: photoURL || avatarFor(username), bio:'Signed in with Google', isOwner: cleanEmail===OWNER_EMAIL, isVip: cleanEmail===OWNER_EMAIL, isVerified: cleanEmail===OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
                 state.users.push(user);
-                logHistory('Google account created');
+                logHistory('Firebase Google account created');
+            } else {
+                if(firebaseUid) user.firebaseUid = firebaseUid;
+                if(photoURL && (!user.avatar || user.avatar.startsWith('data:'))) user.avatar = photoURL;
+                if(displayName && (!user.fullName || user.fullName===user.username)) user.fullName = displayName;
             }
             state.currentUserId = user.id;
             sessionStorage.setItem('chatgram_session_user', user.id);
-            logHistory('Logged in');
+            logHistory('Logged in with Firebase Google');
             saveState();
             showApp();
         }
+        async function handleGoogleSignIn(){
+            try {
+                if(window.chatgramFirebaseSignIn){
+                    const googleUser = await window.chatgramFirebaseSignIn();
+                    if(!googleUser) return; // redirect flow started
+                    return finishGoogleAuth(googleUser.email, googleUser.displayName, googleUser.photoURL, googleUser.uid);
+                }
+                alert('Firebase is still loading or blocked. Sandbox Google sign-in will open.');
+            } catch(err) {
+                console.error(err);
+                alert('Firebase Google sign-in failed: ' + (err.message || err.code || err) + '\n\nFallback sandbox Google sign-in will open.');
+            }
+            // Fallback for offline preview / blocked Firebase SDK
+            const email = prompt('Google Sign-In fallback (sandbox)\nEnter your Gmail address:');
+            if(!email) return;
+            const cleanEmail = email.trim().toLowerCase();
+            if(!/^[^@\s]+@gmail\.com$/.test(cleanEmail)) return alert('Please enter a valid Gmail address.');
+            if(!await verifySandboxOTP(cleanEmail)) return alert('Wrong sandbox OTP.');
+            finishGoogleAuth(cleanEmail, googleNameFromEmail(cleanEmail), '', 'sandbox-google');
+        }
+        window.addEventListener('chatgram-firebase-user', e => {
+            const u = e.detail || {};
+            finishGoogleAuth(u.email, u.displayName, u.photoURL, u.uid);
+        });
 
         async function forgotPassword(e){
             e?.preventDefault?.();
@@ -2295,6 +2420,29 @@
             document.getElementById('loginUsername').value = ''; document.getElementById('loginPassword').value = '';
         }
 
+        async function getStorageInfo(){
+            if(!navigator.storage?.estimate) return {quota:0, usage:0, percent:0};
+            const e = await navigator.storage.estimate();
+            const quota=e.quota||0, usage=e.usage||0;
+            return {quota, usage, percent: quota ? Math.min(100, Math.round((usage/quota)*100)) : 0};
+        }
+        function gb(n){ return n ? (n/1024/1024/1024).toFixed(2)+' GB' : 'Unknown'; }
+        async function enableLargeStorageMode(showAlert=true){
+            let persisted=false;
+            try { if(navigator.storage?.persist) persisted = await navigator.storage.persist(); } catch(e) {}
+            state.largeStorageMode = true;
+            saveState();
+            const info = await getStorageInfo();
+            if(showAlert) alert(`Large Storage Mode enabled.
+
+Used: ${gb(info.usage)}
+Browser allowed quota: ${gb(info.quota)}
+Persistent storage: ${persisted?'Granted':'Not guaranteed'}
+
+Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and persistent request for maximum possible storage.`);
+            if(state.currentPage==='settings') renderSettings();
+        }
+
         function showApp() {
             document.getElementById('authContainer').style.display='none';
             document.getElementById('appContainer').style.display='none';
@@ -2302,6 +2450,7 @@
             splash.style.display='flex';
             ensureCreateControls();
             updateAnnouncementBar();
+            if(!state.largeStorageMode) enableLargeStorageMode(false);
             loadAllMedia().then(() => {
                 setTimeout(()=>{
                     splash.style.display='none';
@@ -2493,7 +2642,7 @@
             const htmlMsgs = msgs.map(m=>{
                 const sender=byId(m.senderId)||{}; const mine=m.senderId===me.id; const day=formatMsgDay(m.createdAt); let dayHtml='';
                 if(day!==lastDay){ lastDay=day; dayHtml=`<div class="msg-day">${day}</div>`; }
-                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${m.media ? (m.mediaType==='video'?`<video src="${m.media}" controls style="max-width:220px;border-radius:12px;display:block;margin-bottom:6px"></video>`:`<img src="${m.media}" style="max-width:220px;border-radius:12px;display:block;margin-bottom:6px">`) : ''}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?'<span class="msg-status">✓✓</span>':''}</div></div>`;
+                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?'<span class="msg-status">✓✓</span>':''}</div></div>`;
             }).join('');
             document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
             renderMessages(); setTimeout(()=>{const c=document.getElementById('chatMessages'); if(c) c.scrollTop=c.scrollHeight;},50);
@@ -2505,16 +2654,39 @@
             msgs.push({id:Date.now(), text, senderId:me.id, receiverId:Number(state.activeChat), createdAt:Date.now(), readBy:[me.id]});
             logHistory('Message sent'); input.value=''; saveState(); notifyRealtime('message'); openChat(state.activeChat);
         }
-        function sendMediaMessage(e){
+        async function sendMediaMessage(e){
             const file=e.target.files[0], me=getCurrentUser(); if(!file||!state.activeChat||!me)return;
-            const reader=new FileReader();
-            reader.onload=ev=>{ const msgs=getThreadWith(state.activeChat); msgs.push({id:Date.now(), text:file.name, media:ev.target.result, mediaType:file.type.startsWith('video')?'video':'image', senderId:me.id, receiverId:Number(state.activeChat), createdAt:Date.now(), readBy:[me.id]}); logHistory('Media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat); };
-            reader.readAsDataURL(file); e.target.value='';
+            const mediaKey = 'dm_' + me.id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            try {
+                await saveMediaBlob(mediaKey, file);
+                mediaCache[mediaKey] = URL.createObjectURL(file);
+                const msgs=getThreadWith(state.activeChat);
+                msgs.push({id:Date.now(), text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:Date.now(), readBy:[me.id]});
+                logHistory('Large media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat);
+            } catch(err){
+                alert('Device/browser storage quota full. Please free storage and try again.');
+            }
+            e.target.value='';
         }
-        let callTimerInt=null, callStarted=0;
-        function startVoiceCall(userId){ const u=byId(userId); if(!u)return; document.getElementById('callAvatar').src=u.avatar; document.getElementById('callName').textContent='Calling '+u.username; document.getElementById('callTimer').textContent='Connecting...'; document.getElementById('callOverlay').style.display='flex'; callStarted=Date.now(); clearInterval(callTimerInt); setTimeout(()=>{document.getElementById('callName').textContent=u.username; callTimerInt=setInterval(()=>{document.getElementById('callTimer').textContent='Connected '+formatDuration((Date.now()-callStarted)/1000);},1000);},1200); }
-        function endVoiceCall(){ clearInterval(callTimerInt); document.getElementById('callOverlay').style.display='none'; }
-        function toggleCallMute(){ alert('Microphone muted/unmuted in sandbox call.'); }
+        let callTimerInt=null, callStarted=0, callStream=null, callMuted=false;
+        async function startVoiceCall(userId){
+            const u=byId(userId); if(!u)return;
+            document.getElementById('callAvatar').src=u.avatar;
+            document.getElementById('callName').textContent='Calling '+u.username;
+            document.getElementById('callTimer').textContent='Requesting microphone...';
+            document.getElementById('callOverlay').style.display='flex';
+            try {
+                callStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+                document.getElementById('callTimer').innerHTML='<span class="call-status-live">Microphone live</span> · Connecting...';
+                logHistory('Voice call started');
+            } catch(err) {
+                document.getElementById('callTimer').textContent='Microphone permission denied. Demo call UI only.';
+            }
+            callStarted=Date.now(); clearInterval(callTimerInt);
+            setTimeout(()=>{document.getElementById('callName').textContent=u.username; callTimerInt=setInterval(()=>{document.getElementById('callTimer').innerHTML='Connected '+formatDuration((Date.now()-callStarted)/1000)+(callStream?' · <span class="call-status-live">mic active</span>':' · demo');},1000);},1200);
+        }
+        function endVoiceCall(){ clearInterval(callTimerInt); if(callStream){ callStream.getTracks().forEach(t=>t.stop()); callStream=null; } document.getElementById('callOverlay').style.display='none'; }
+        function toggleCallMute(){ if(!callStream) return alert('No real microphone stream active.'); callMuted=!callMuted; callStream.getAudioTracks().forEach(t=>t.enabled=!callMuted); alert(callMuted?'Microphone muted':'Microphone unmuted'); }
 
         // ============ NOTIFICATIONS ============
         function renderNotifications() { const box=document.getElementById('notificationsContent'); if(!state.notifications.length){box.innerHTML='<div class="empty-state"><h3>No notifications</h3><p>Likes, comments, follows and messages will appear here.</p></div>';return;} box.innerHTML='<div class="notif-section-title">Recent</div>'+state.notifications.sort((a,b)=>b.id-a.id).map(n=>`<div class="notif-item" style="opacity:${n.read?0.8:1}"><img src="${n.avatar}" alt=""><div class="notif-text">${n.text} <span class="notif-time">${escapeHTML(n.time)}</span></div></div>`).join(''); state.notifications.forEach(n=>n.read=true); saveState(); updateBadges(); }
@@ -2608,13 +2780,15 @@
             const myPosts=state.posts.filter(p=>p.userId===u.id), totalLikes=myPosts.reduce((s,p)=>s+(p.likedBy||[]).length,0), totalComments=myPosts.reduce((s,p)=>s+(p.comments||[]).length,0);
             const settingsSearch = `<div class="settings-card"><h2>Search in Settings</h2><small style="color:var(--text-muted)">Search users by username/CG-ID or type settings like privacy, password, analytics.</small><input id="settingsSearchInput" class="settings-search-box" placeholder="Search users or settings..." oninput="filterSettingsSearch()"><div id="settingsSearchResults" class="settings-search-results"></div></div>`;
             const analyticsMini = `<div class="settings-card"><div class="settings-row"><div><b>Creator Analytics</b><small>${myPosts.length} posts/reels · ${formatNumber(totalLikes)} likes · ${formatNumber(totalComments)} comments</small></div><button class="mini-btn" onclick="navigateTo('analytics')">Open Analytics</button></div></div>`;
+            const storagePanel = `<div class="settings-card"><div class="settings-row"><div><b>Large Storage Mode</b><small>For 10-20GB large media, Chatgram requests maximum browser persistent quota and stores media as IndexedDB blobs.</small><div id="storageInfoText" class="notification-status">Tap check to see available quota.</div><div class="storage-meter"><span id="storageMeterBar"></span></div></div><div class="admin-actions"><button class="mini-btn" onclick="enableLargeStorageMode(true)">Enable Max Storage</button><button class="mini-btn secondary" onclick="showStorageInfo()">Check Space</button></div></div></div>`;
             const historyPanel = `<div class="settings-card"><div class="settings-row"><div><b>History</b><small>Recent account activity</small></div><button class="mini-btn secondary" onclick="clearHistory()">Clear</button></div>${(state.history||[]).slice(0,12).map(h=>`<div class="history-item"><b>${escapeHTML(h.action)}</b><br>${escapeHTML(h.time)} · ${escapeHTML(h.user)}</div>`).join('') || '<small style="color:var(--text-muted)">No history yet.</small>'}</div>`;
             const contactPanel = `<div class="settings-card"><div class="settings-row"><div><b>Contact us</b><small>Report issue or share your problem by Gmail.</small></div><button class="mini-btn" onclick="location.href='mailto:amrendrakumarsingh6856@gmail.com?subject=Chatgram%20Support&body=Please%20describe%20your%20problem...'">Contact Gmail</button></div></div>`;
             const firewallPanel = `<div class="settings-card"><div class="settings-row"><div><b>Chatgram Firewall</b><small>Client-side protection: unsafe script text blocking, OTP verification, duplicate email check, session isolation and input escaping are active.</small></div><button class="mini-btn secondary" onclick="alert('Firewall active: XSS text filter, OTP sandbox, duplicate email guard, safe rendering, notification permission control.')">View</button></div></div>`;
             const ownerStats = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Total users</h2><div class="analytics-grid"><div class="metric-card"><b>${state.users.length}</b><span>Active users</span></div><div class="metric-card"><b>${(state.deletedUsers||[]).length}</b><span>Past/deleted users</span></div></div><div>${state.users.map(x=>`<div class="history-item">${escapeHTML(x.username)} · ${escapeHTML(x.email||'no email')} · ${accountId(x)}</div>`).join('')}</div></div>` : '';
             const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">👑 Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Only owner email <b>${OWNER_EMAIL}</b> can manage badges, bans and announcements.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify ✓</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button></div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
-            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${contactPanel}${firewallPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Separate video/photo browse buttons added. If mobile gallery hides videos, use Browse Video button.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
+            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${storagePanel}${contactPanel}${firewallPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Separate video/photo browse buttons added. If mobile gallery hides videos, use Browse Video button.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
         }
+        async function showStorageInfo(){ const info=await getStorageInfo(); const text=document.getElementById('storageInfoText'), bar=document.getElementById('storageMeterBar'); if(text) text.textContent=`Used ${gb(info.usage)} of ${gb(info.quota)} (${info.percent}%)`; if(bar) bar.style.width=info.percent+'%'; }
         function clearHistory(){ state.history=[]; saveState(); renderSettings(); }
         function filterSettingsSearch(){
             const q=(document.getElementById('settingsSearchInput')?.value||'').toLowerCase().trim();
