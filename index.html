@@ -2008,6 +2008,7 @@
         try { if (await analyticsSupported()) getAnalytics(app); } catch (e) { console.warn('Analytics unavailable', e); }
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const USERS_COLLECTION = 'chatgram_users_v2';
         auth.languageCode = 'en';
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -2024,14 +2025,14 @@
 
         window.chatgramCloudUpsertUser = async function(user) {
             if (!user || !user.publicId) return;
-            await setDoc(doc(db, 'users', user.publicId), {...user, updatedAt: serverTimestamp()}, { merge: true });
+            await setDoc(doc(db, USERS_COLLECTION, user.publicId), {...user, updatedAt: serverTimestamp()}, { merge: true });
         };
         window.chatgramCloudLoadUsers = async function() {
-            const snap = await getDocs(collection(db, 'users'));
+            const snap = await getDocs(collection(db, USERS_COLLECTION));
             return snap.docs.map(d => ({...d.data(), publicId: d.id}));
         };
         window.chatgramCloudStartUsersSync = function(callback) {
-            return onSnapshot(collection(db, 'users'), snap => {
+            return onSnapshot(collection(db, USERS_COLLECTION), snap => {
                 callback(snap.docs.map(d => ({...d.data(), publicId: d.id})));
             }, err => console.warn('Cloud users sync error', err));
         };
@@ -2069,7 +2070,7 @@
 
     <script>
         // ============ REAL LOCAL DATA STORE ============
-        const DB_KEY = 'chatgram_real_state_v3';
+        const DB_KEY = 'chatgram_real_state_v4_fresh';
         const OLD_KEY = 'chatgram_state';
         const OWNER_EMAIL = 'abhishekkumarsingh6856@gmail.com';
 
@@ -2274,6 +2275,16 @@
         function accountId(u) { return 'CG-' + hashTo6(u?.email || u?.username || u?.id); }
         function vipBadge(u) { return (u?.isOwner ? '<span class="vip-badge owner-badge">👑 OWNER</span>' : (u?.isVip ? '<span class="vip-badge">💎 VIP</span>' : '')) + (u?.isVerified ? '<span class="badge-verified">✓</span>' : '') + (u?.isBanned ? ' <span class="banned-label">BANNED</span>' : ''); }
         function isOwnerUser(u=getCurrentUser()) { return !!(u && u.email === OWNER_EMAIL); }
+        function waitForFirebaseCloud(timeout=6000){
+            return new Promise(resolve => {
+                if(window.chatgramCloudLoadUsers) return resolve(true);
+                const start=Date.now();
+                const timer=setInterval(()=>{
+                    if(window.chatgramCloudLoadUsers){ clearInterval(timer); resolve(true); }
+                    else if(Date.now()-start>timeout){ clearInterval(timer); resolve(false); }
+                },150);
+            });
+        }
         function cloudIdToLocalId(publicId){ return Number(String(publicId||'').replace(/\D/g,'').slice(-9)) || (Date.now()+Math.floor(Math.random()*9999)); }
         function userPublicProfile(u){
             return { publicId: accountId(u), localId: u.id, username:u.username, fullName:u.fullName, email:u.email||'', avatar:u.avatar, bio:u.bio||'', isOwner:!!u.isOwner, isVip:!!u.isVip, isVerified:!!u.isVerified, location:u.location||'', website:u.website||'', followers:(u.followerIds||[]).length, following:(u.followingIds||[]).length };
@@ -2296,7 +2307,9 @@
             if(changed){ saveState(); if(state.currentPage==='explore') filterExplore(); if(state.currentPage==='feed') renderFeed(); if(state.currentPage==='settings') renderSettings(); }
         }
         async function syncCurrentUserToCloud(){
-            const u=getCurrentUser(); if(!u || !state.cloudSyncEnabled || !window.chatgramCloudUpsertUser) return;
+            const u=getCurrentUser(); if(!u || !state.cloudSyncEnabled) return;
+            await waitForFirebaseCloud(6000);
+            if(!window.chatgramCloudUpsertUser) return;
             try { await window.chatgramCloudUpsertUser(userPublicProfile(u)); } catch(e){ console.warn('Cloud user upload failed', e); }
         }
         function syncCurrentUserToCloudSoon(){
@@ -2307,6 +2320,7 @@
         let cloudUnsubUsers=null;
         async function startCloudUsersSync(){
             if(!state.cloudSyncEnabled) return;
+            await waitForFirebaseCloud(6000);
             try { if(window.chatgramCloudLoadUsers) mergeCloudUsers(await window.chatgramCloudLoadUsers()); } catch(e){ console.warn('Cloud users load failed', e); }
             try { if(!cloudUnsubUsers && window.chatgramCloudStartUsersSync) cloudUnsubUsers = window.chatgramCloudStartUsersSync(mergeCloudUsers); } catch(e){ console.warn('Cloud live sync failed', e); }
         }
@@ -2330,15 +2344,10 @@
             const email = document.getElementById('signupEmail').value.trim().toLowerCase();
             const password = document.getElementById('signupPassword').value;
             if (!fullname || !username || !email || !password) return;
+            await waitForFirebaseCloud(6000);
+            try { if(window.chatgramCloudLoadUsers) mergeCloudUsers(await window.chatgramCloudLoadUsers()); } catch(e) { console.warn('Cloud duplicate email check failed', e); }
             if (state.users.some(u => u.username === username)) return alert('Username already exists. Please choose another username.');
-            if (state.users.some(u => u.email && u.email === email)) return alert('Email already registered. Please log in.');
-            try {
-                if(window.chatgramCloudLoadUsers){
-                    const cloudUsers = await window.chatgramCloudLoadUsers();
-                    if(cloudUsers.some(u => (u.email||'').toLowerCase() === email)) return alert('This email already has a Chatgram account on another device. Please sign in with Google or use the same email login.');
-                    mergeCloudUsers(cloudUsers);
-                }
-            } catch(e) { console.warn('Cloud duplicate email check failed', e); }
+            if (state.users.some(u => u.email && u.email.toLowerCase() === email)) return alert('Already have an account with this Gmail/email. Please log in or use Sign in with Google.');
             if (!await verifySandboxOTP(email)) return alert('Wrong sandbox OTP.');
             const user = { id: Date.now(), username, fullName: fullname, email, password, avatar: avatarFor(username), bio:'✨ New to Chatgram!', isOwner: email === OWNER_EMAIL, isVip: email === OWNER_EMAIL, isVerified: email === OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
             state.users.push(user);
@@ -2841,7 +2850,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const settingsSearch = `<div class="settings-card"><h2>Search in Settings</h2><small style="color:var(--text-muted)">Search users by username/CG-ID or type settings like privacy, password, analytics.</small><input id="settingsSearchInput" class="settings-search-box" placeholder="Search users or settings..." oninput="filterSettingsSearch()"><div id="settingsSearchResults" class="settings-search-results"></div></div>`;
             const analyticsMini = `<div class="settings-card"><div class="settings-row"><div><b>Creator Analytics</b><small>${myPosts.length} posts/reels · ${formatNumber(totalLikes)} likes · ${formatNumber(totalComments)} comments</small></div><button class="mini-btn" onclick="navigateTo('analytics')">Open Analytics</button></div></div>`;
             const storagePanel = `<div class="settings-card"><div class="settings-row"><div><b>Large Storage Mode</b><small>For 10-20GB large media, Chatgram requests maximum browser persistent quota and stores media as IndexedDB blobs.</small><div id="storageInfoText" class="notification-status">Tap check to see available quota.</div><div class="storage-meter"><span id="storageMeterBar"></span></div></div><div class="admin-actions"><button class="mini-btn" onclick="enableLargeStorageMode(true)">Enable Max Storage</button><button class="mini-btn secondary" onclick="showStorageInfo()">Check Space</button></div></div></div>`;
-            const cloudPanel = `<div class="settings-card"><div class="settings-row"><div><b>Cloud Account Sync</b><small>Firebase Firestore se accounts dusre devices par search/profile me show honge.</small><div class="notification-status">Status: ${state.cloudSyncEnabled?'Enabled':'Disabled'} · Cloud users loaded: ${state.users.filter(x=>x.cloudOnly).length}</div></div><div class="admin-actions"><button class="mini-btn" onclick="state.cloudSyncEnabled=true;saveState();syncCurrentUserToCloud();startCloudUsersSync();renderSettings()">Enable Sync</button><button class="mini-btn secondary" onclick="state.cloudSyncEnabled=false;saveState();renderSettings()">Disable</button><button class="mini-btn secondary" onclick="syncCurrentUserToCloud();startCloudUsersSync()">Sync Now</button></div></div></div>`;
+            const cloudPanel = `<div class="settings-card"><div class="settings-row"><div><b>Cloud Account Sync</b><small>Firebase Firestore se accounts dusre devices par search/profile me show honge. Fresh collection active: old accounts hidden.</small><div class="notification-status">Status: ${state.cloudSyncEnabled?'Enabled':'Disabled'} · Cloud users loaded: ${state.users.filter(x=>x.cloudOnly).length}</div></div><div class="admin-actions"><button class="mini-btn" onclick="state.cloudSyncEnabled=true;saveState();syncCurrentUserToCloud();startCloudUsersSync();renderSettings()">Enable Sync</button><button class="mini-btn secondary" onclick="state.cloudSyncEnabled=false;saveState();renderSettings()">Disable</button><button class="mini-btn secondary" onclick="syncCurrentUserToCloud();startCloudUsersSync()">Sync Now</button></div></div></div>`;
             const historyPanel = `<div class="settings-card"><div class="settings-row"><div><b>History</b><small>Recent account activity</small></div><button class="mini-btn secondary" onclick="clearHistory()">Clear</button></div>${(state.history||[]).slice(0,12).map(h=>`<div class="history-item"><b>${escapeHTML(h.action)}</b><br>${escapeHTML(h.time)} · ${escapeHTML(h.user)}</div>`).join('') || '<small style="color:var(--text-muted)">No history yet.</small>'}</div>`;
             const contactPanel = `<div class="settings-card"><div class="settings-row"><div><b>Contact us</b><small>Report issue or share your problem by Gmail.</small></div><button class="mini-btn" onclick="location.href='mailto:amrendrakumarsingh6856@gmail.com?subject=Chatgram%20Support&body=Please%20describe%20your%20problem...'">Contact Gmail</button></div></div>`;
             const firewallPanel = `<div class="settings-card"><div class="settings-row"><div><b>Chatgram Firewall</b><small>Client-side protection: unsafe script text blocking, OTP verification, duplicate email check, session isolation and input escaping are active.</small></div><button class="mini-btn secondary" onclick="alert('Firewall active: XSS text filter, OTP sandbox, duplicate email guard, safe rendering, notification permission control.')">View</button></div></div>`;
