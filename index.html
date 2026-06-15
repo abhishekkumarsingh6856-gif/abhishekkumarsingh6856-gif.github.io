@@ -1688,6 +1688,9 @@
         @keyframes introExit { 0%,82%{opacity:1} 100%{opacity:0} }
         .storage-meter { height:10px; border-radius:999px; background:#222; overflow:hidden; margin-top:10px; }
         .storage-meter span { display:block; height:100%; background:linear-gradient(90deg,#0095f6,#58c322); width:0%; }
+
+        .storage-permission-ok { color:#58c322; font-weight:900; }
+        .storage-permission-no { color:#ffb020; font-weight:900; }
     </style>
 </head>
 <body>
@@ -2130,7 +2133,8 @@
             largeStorageMode: false,
             cloudSyncEnabled: true,
             cloudinary: { cloudName: '', uploadPreset: '' },
-            deviceAccounts: []
+            deviceAccounts: [],
+            userStorageConsent: false
         };
 
         let selectedMedia = null;
@@ -2219,6 +2223,7 @@
             state.cloudSyncEnabled = state.cloudSyncEnabled !== false;
             state.cloudinary = state.cloudinary || { cloudName: '', uploadPreset: '' };
             state.deviceAccounts = Array.isArray(state.deviceAccounts) ? state.deviceAccounts : [];
+            state.userStorageConsent = !!state.userStorageConsent;
             state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
             Object.keys(state.threads).forEach(k => { state.threads[k] = (state.threads[k] || []).map(m => ({...m, createdAt:m.createdAt||m.id||Date.now()})); });
             state.users.forEach(u => {
@@ -2598,6 +2603,30 @@
             return {quota, usage, percent: quota ? Math.min(100, Math.round((usage/quota)*100)) : 0};
         }
         function gb(n){ return n ? (n/1024/1024/1024).toFixed(2)+' GB' : 'Unknown'; }
+        async function requestUserStoragePermission(){
+            let persisted=false;
+            try { if(navigator.storage?.persist) persisted = await navigator.storage.persist(); } catch(e) {}
+            state.userStorageConsent = true;
+            state.largeStorageMode = true;
+            saveState();
+            const info=await getStorageInfo();
+            alert(`Device Storage enabled for Chatgram media.\n\nPersistent permission: ${persisted?'Granted':'Browser managed'}\nAvailable quota: ${gb(info.quota)}\nUsed: ${gb(info.usage)}\n\nYour posts, reels, stories and DM media will first be saved in this device browser storage.`);
+            if(state.currentPage==='settings') renderSettings();
+            return true;
+        }
+        async function ensureUserStoragePermission(fileSize=0){
+            if(!state.userStorageConsent){
+                const ok=confirm('Chatgram needs permission to use this device storage for media uploads (post/story/reel/message). Allow device storage?');
+                if(!ok) return false;
+                await requestUserStoragePermission();
+            }
+            const info=await getStorageInfo();
+            if(info.quota && fileSize && (info.usage + fileSize > info.quota * 0.95)){
+                alert(`Not enough browser storage for this file.\nFile: ${gb(fileSize)}\nUsed: ${gb(info.usage)} / ${gb(info.quota)}\nPlease free space or use cloud media settings.`);
+                return false;
+            }
+            return true;
+        }
         async function enableLargeStorageMode(showAlert=true){
             let persisted=false;
             try { if(navigator.storage?.persist) persisted = await navigator.storage.persist(); } catch(e) {}
@@ -2836,6 +2865,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const file=e.target.files[0], me=getCurrentUser(); if(!file||!state.activeChat||!me)return;
             const mediaKey = 'dm_' + me.id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2);
             try {
+                if(!await ensureUserStoragePermission(file.size)) return;
                 await saveMediaBlob(mediaKey, file);
                 mediaCache[mediaKey] = URL.createObjectURL(file);
                 const msgs=getThreadWith(state.activeChat);
@@ -2960,7 +2990,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const myPosts=state.posts.filter(p=>p.userId===u.id), totalLikes=myPosts.reduce((s,p)=>s+(p.likedBy||[]).length,0), totalComments=myPosts.reduce((s,p)=>s+(p.comments||[]).length,0);
             const settingsSearch = `<div class="settings-card"><h2>Search in Settings</h2><small style="color:var(--text-muted)">Search users by username/CG-ID or type settings like privacy, password, analytics.</small><input id="settingsSearchInput" class="settings-search-box" placeholder="Search users or settings..." oninput="filterSettingsSearch()"><div id="settingsSearchResults" class="settings-search-results"></div></div>`;
             const analyticsMini = `<div class="settings-card"><div class="settings-row"><div><b>Creator Analytics</b><small>${myPosts.length} posts/reels · ${formatNumber(totalLikes)} likes · ${formatNumber(totalComments)} comments</small></div><button class="mini-btn" onclick="navigateTo('analytics')">Open Analytics</button></div></div>`;
-            const storagePanel = `<div class="settings-card"><div class="settings-row"><div><b>Large Storage Mode</b><small>For 10-20GB large media, Chatgram requests maximum browser persistent quota and stores media as IndexedDB blobs.</small><div id="storageInfoText" class="notification-status">Tap check to see available quota.</div><div class="storage-meter"><span id="storageMeterBar"></span></div></div><div class="admin-actions"><button class="mini-btn" onclick="enableLargeStorageMode(true)">Enable Max Storage</button><button class="mini-btn secondary" onclick="showStorageInfo()">Check Space</button></div></div></div>`;
+            const storagePanel = `<div class="settings-card"><div class="settings-row"><div><b>Large Storage Mode</b><small>For 10-20GB large media, Chatgram requests maximum browser persistent quota and stores media as IndexedDB blobs.</small><div id="storageInfoText" class="notification-status">Device storage: ${state.userStorageConsent?'<span class="storage-permission-ok">Allowed</span>':'<span class="storage-permission-no">Not allowed yet</span>'}. Tap check to see quota.</div><div class="storage-meter"><span id="storageMeterBar"></span></div></div><div class="admin-actions"><button class="mini-btn" onclick="requestUserStoragePermission()">Allow Device Storage</button><button class="mini-btn secondary" onclick="enableLargeStorageMode(true)">Max Storage</button><button class="mini-btn secondary" onclick="showStorageInfo()">Check Space</button></div></div></div>`;
             const cloudPanel = `<div class="settings-card"><div class="settings-row"><div><b>Cloud Account Sync</b><small>Firebase Firestore se accounts dusre devices par search/profile me show honge. Fresh collection active: old accounts hidden.</small><div class="notification-status">Status: ${state.cloudSyncEnabled?'Enabled':'Disabled'} · Cloud users loaded: ${state.users.filter(x=>x.cloudOnly).length}</div></div><div class="admin-actions"><button class="mini-btn" onclick="state.cloudSyncEnabled=true;saveState();syncCurrentUserToCloud();startCloudUsersSync();renderSettings()">Enable Sync</button><button class="mini-btn secondary" onclick="state.cloudSyncEnabled=false;saveState();renderSettings()">Disable</button><button class="mini-btn secondary" onclick="syncCurrentUserToCloud();startCloudUsersSync()">Sync Now</button></div></div></div>`;
             const cloudinaryPanel = `<div class="settings-card"><h2>Media Cloud without Firebase Storage</h2><small style="color:var(--text-muted)">Firebase Storage subscription maang raha hai? Cloudinary free unsigned upload use karo. Cloud name aur unsigned upload preset save karo; posts/reels/DM media cloud me show honge.</small><input id="cloudinaryCloudName" class="settings-search-box" placeholder="Cloudinary cloud name" value="${escapeHTML(state.cloudinary?.cloudName||'')}"><input id="cloudinaryUploadPreset" class="settings-search-box" placeholder="Unsigned upload preset" value="${escapeHTML(state.cloudinary?.uploadPreset||'')}"><button class="mini-btn" style="margin-top:10px" onclick="saveCloudinarySettings()">Save Cloudinary</button></div>`;
             const historyPanel = `<div class="settings-card"><div class="settings-row"><div><b>History</b><small>Recent account activity</small></div><button class="mini-btn secondary" onclick="clearHistory()">Clear</button></div>${(state.history||[]).slice(0,12).map(h=>`<div class="history-item"><b>${escapeHTML(h.action)}</b><br>${escapeHTML(h.time)} · ${escapeHTML(h.user)}</div>`).join('') || '<small style="color:var(--text-muted)">No history yet.</small>'}</div>`;
@@ -3151,8 +3181,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const mediaKey = 'media_' + me.id + '_' + id;
             const btn = document.getElementById('shareBtn');
             const oldText = btn.textContent;
-            btn.disabled = true; btn.textContent = 'Saving large file...';
+            btn.disabled = true; btn.textContent = 'Checking storage permission...';
             try {
+                if(!await ensureUserStoragePermission(selectedFile.size)){ btn.disabled=false; btn.textContent=oldText; return; }
+                btn.textContent = 'Saving to your device storage...';
                 await saveMediaBlob(mediaKey, selectedFile);
                 mediaCache[mediaKey] = URL.createObjectURL(selectedFile);
                 let cloudMediaUrl = '';
