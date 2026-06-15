@@ -1992,7 +1992,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
         import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp, addDoc, orderBy, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnxk3MXnnsb-hlCFt4ElLOGHQPu0b8BdQ",
@@ -2009,6 +2010,10 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const USERS_COLLECTION = 'chatgram_users_v2';
+        const POSTS_COLLECTION = 'chatgram_posts_v2';
+        const THREADS_COLLECTION = 'chatgram_threads_v2';
+        const CALLS_COLLECTION = 'chatgram_calls_v2';
+        const fbStorage = getStorage(app);
         auth.languageCode = 'en';
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -2035,6 +2040,37 @@
             return onSnapshot(collection(db, USERS_COLLECTION), snap => {
                 callback(snap.docs.map(d => ({...d.data(), publicId: d.id})));
             }, err => console.warn('Cloud users sync error', err));
+        };
+        window.chatgramCloudUploadMedia = async function(path, blob) {
+            try {
+                const r = storageRef(fbStorage, path);
+                await uploadBytes(r, blob);
+                return await getDownloadURL(r);
+            } catch (err) {
+                console.warn('Firebase Storage upload failed, trying external media uploader', err);
+                if (window.chatgramExternalMediaUpload) return await window.chatgramExternalMediaUpload(blob, path);
+                throw err;
+            }
+        };
+        window.chatgramCloudUpsertPost = async function(post) {
+            if(!post || !post.id) return;
+            await setDoc(doc(db, POSTS_COLLECTION, String(post.id)), {...post, updatedAt: serverTimestamp()}, {merge:true});
+        };
+        window.chatgramCloudStartPostsSync = function(callback) {
+            return onSnapshot(collection(db, POSTS_COLLECTION), snap => callback(snap.docs.map(d=>({...d.data(), cloudId:d.id}))), err=>console.warn('Cloud posts sync error', err));
+        };
+        window.chatgramCloudAddMessage = async function(threadId, msg) {
+            await addDoc(collection(db, THREADS_COLLECTION, threadId, 'messages'), {...msg, createdAtServer: serverTimestamp()});
+        };
+        window.chatgramCloudStartThreadSync = function(threadId, callback) {
+            const q = query(collection(db, THREADS_COLLECTION, threadId, 'messages'), orderBy('createdAtClient','asc'));
+            return onSnapshot(q, snap => callback(snap.docs.map(d=>({id:d.id, ...d.data()}))), err=>console.warn('Cloud thread sync error', err));
+        };
+        window.chatgramCloudCreateCall = async function(call) { return await addDoc(collection(db, CALLS_COLLECTION), {...call, createdAtServer: serverTimestamp()}); };
+        window.chatgramCloudUpdateCall = async function(callId, data) { await updateDoc(doc(db, CALLS_COLLECTION, callId), data); };
+        window.chatgramCloudListenCalls = function(receiverPublicId, callback) {
+            const q = query(collection(db, CALLS_COLLECTION), where('receiverPublicId','==',receiverPublicId), where('status','==','ringing'));
+            return onSnapshot(q, snap => callback(snap.docs.map(d=>({id:d.id, ...d.data()}))), err=>console.warn('Cloud calls sync error', err));
         };
 
         window.chatgramFirebaseReady = true;
@@ -2092,7 +2128,9 @@
             history: [],
             deletedUsers: [],
             largeStorageMode: false,
-            cloudSyncEnabled: true
+            cloudSyncEnabled: true,
+            cloudinary: { cloudName: '', uploadPreset: '' },
+            deviceAccounts: []
         };
 
         let selectedMedia = null;
@@ -2179,6 +2217,8 @@
             state.deletedUsers = Array.isArray(state.deletedUsers) ? state.deletedUsers : [];
             state.largeStorageMode = !!state.largeStorageMode;
             state.cloudSyncEnabled = state.cloudSyncEnabled !== false;
+            state.cloudinary = state.cloudinary || { cloudName: '', uploadPreset: '' };
+            state.deviceAccounts = Array.isArray(state.deviceAccounts) ? state.deviceAccounts : [];
             state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
             Object.keys(state.threads).forEach(k => { state.threads[k] = (state.threads[k] || []).map(m => ({...m, createdAt:m.createdAt||m.id||Date.now()})); });
             state.users.forEach(u => {
@@ -2248,6 +2288,7 @@
 
         function getCurrentUser() { const sid = Number(sessionStorage.getItem('chatgram_session_user') || state.currentUserId); return state.users.find(u => u.id === sid) || state.users.find(u => u.id === state.currentUserId) || null; }
         function byId(id) { return state.users.find(u => u.id === Number(id)); }
+        function markDeviceAccount(u){ if(!u)return; state.deviceAccounts ||= []; const key=(u.email||String(u.id)).toLowerCase(); if(!state.deviceAccounts.includes(key)) state.deviceAccounts.push(key); }
         function cleanUsername(v) { return String(v).trim().toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 30); }
         function escapeHTML(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
         function formatNumber(num) { num = Number(num)||0; if (num>=1000000) return (num/1000000).toFixed(1)+'M'; if (num>=1000) return (num/1000).toFixed(1)+'K'; return String(num); }
@@ -2304,7 +2345,7 @@
                     u.cloudPublicId=c.publicId;
                 }
             });
-            if(changed){ saveState(); if(state.currentPage==='explore') filterExplore(); if(state.currentPage==='feed') renderFeed(); if(state.currentPage==='settings') renderSettings(); }
+            if(changed){ saveState(); startCloudThreadsForKnownUsers(); if(state.currentPage==='explore') filterExplore(); if(state.currentPage==='feed') renderFeed(); if(state.currentPage==='settings') renderSettings(); }
         }
         async function syncCurrentUserToCloud(){
             const u=getCurrentUser(); if(!u || !state.cloudSyncEnabled) return;
@@ -2323,6 +2364,66 @@
             await waitForFirebaseCloud(6000);
             try { if(window.chatgramCloudLoadUsers) mergeCloudUsers(await window.chatgramCloudLoadUsers()); } catch(e){ console.warn('Cloud users load failed', e); }
             try { if(!cloudUnsubUsers && window.chatgramCloudStartUsersSync) cloudUnsubUsers = window.chatgramCloudStartUsersSync(mergeCloudUsers); } catch(e){ console.warn('Cloud live sync failed', e); }
+        }
+        function postPublicData(p){
+            const u=byId(p.userId)||getCurrentUser()||{};
+            return { id:String(p.id), type:p.type, userPublicId:accountId(u), username:u.username||p.username, avatar:u.avatar||p.avatar, caption:p.caption||'', mediaType:p.mediaType||'image', cloudMediaUrl:p.cloudMediaUrl||'', duration:p.duration||0, createdAt:p.id||Date.now(), time:p.time||timeNow(), likedByPublic:(p.likedBy||[]).map(id=>accountId(byId(id)||{id})), comments:p.comments||[] };
+        }
+        function storyPublicData(st){
+            const u=byId(st.userId)||getCurrentUser()||{};
+            return { id:String(st.id), type:'story', userPublicId:accountId(u), username:u.username||st.username, avatar:u.avatar||st.avatar, mediaType:st.mediaType||'image', cloudMediaUrl:st.cloudMediaUrl||'', duration:st.duration||0, stickers:st.stickers||{}, createdAt:st.id||Date.now(), expiresAt:(st.id||Date.now()) + 24*60*60*1000, time:st.time||timeNow() };
+        }
+        async function syncStoryToCloud(st){ if(!st || !state.cloudSyncEnabled) return; await waitForFirebaseCloud(6000); try { if(window.chatgramCloudUpsertPost) await window.chatgramCloudUpsertPost(storyPublicData(st)); } catch(e){ console.warn('Cloud story sync failed', e); } }
+        function cleanupExpiredStories(){ const now=Date.now(); const before=state.stories.length; state.stories=state.stories.filter(st => !st.expiresAt || st.expiresAt>now); if(before!==state.stories.length) saveState(); }
+        function mergeCloudPosts(list){
+            if(!Array.isArray(list)) return; let changed=false;
+            list.forEach(cp=>{
+                if(!cp || !cp.id || !cp.cloudMediaUrl) return;
+                if(cp.type==='story'){
+                    if(cp.expiresAt && cp.expiresAt < Date.now()) return;
+                    let owner = state.users.find(u=>accountId(u)===cp.userPublicId) || {id:cloudIdToLocalId(cp.userPublicId), username:cp.username, avatar:cp.avatar};
+                    if(!state.stories.some(st=>String(st.id)===String(cp.id))){ state.stories.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, userId:owner.id, username:cp.username, avatar:cp.avatar, cloudMediaUrl:cp.cloudMediaUrl, mediaType:cp.mediaType||'image', duration:cp.duration||0, stickers:cp.stickers||{}, time:cp.time||'Cloud', expiresAt:cp.expiresAt, viewedBy:[], cloudOnly:true}); changed=true; }
+                    return;
+                }
+                let owner = state.users.find(u=>accountId(u)===cp.userPublicId) || {id:cloudIdToLocalId(cp.userPublicId), username:cp.username, avatar:cp.avatar};
+                let p = state.posts.find(x=>String(x.id)===String(cp.id));
+                if(!p){ state.posts.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, type:cp.type||'post', userId:owner.id, username:cp.username, avatar:cp.avatar, caption:cp.caption||'', mediaType:cp.mediaType||'image', cloudMediaUrl:cp.cloudMediaUrl, duration:cp.duration||0, likedBy:[], savedBy:[], comments:cp.comments||[], time:cp.time||'Cloud', cloudOnly:true}); changed=true; }
+                else { ['cloudMediaUrl','caption','mediaType','duration','type'].forEach(k=>{ if(cp[k] && p[k]!==cp[k]){p[k]=cp[k]; changed=true;} }); }
+            });
+            if(changed){ cleanupExpiredStories(); saveState(); if(state.currentPage==='feed') renderFeedPosts(); if(state.currentPage==='reels') renderReels(); renderStories(); }
+        }
+        let cloudUnsubPosts=null;
+        async function startCloudPostsSync(){
+            if(!state.cloudSyncEnabled) return; await waitForFirebaseCloud(6000);
+            try { if(!cloudUnsubPosts && window.chatgramCloudStartPostsSync) cloudUnsubPosts=window.chatgramCloudStartPostsSync(mergeCloudPosts); } catch(e){ console.warn('Cloud posts sync failed', e); }
+        }
+        async function syncPostToCloud(p){
+            if(!p || !state.cloudSyncEnabled) return; await waitForFirebaseCloud(6000);
+            try { if(window.chatgramCloudUpsertPost) await window.chatgramCloudUpsertPost(postPublicData(p)); } catch(e){ console.warn('Cloud post sync failed', e); }
+        }
+        function cloudThreadIdWith(userId){ const me=getCurrentUser(), other=byId(userId); if(!me||!other) return ''; return [accountId(me), accountId(other)].sort().join('__'); }
+        let cloudThreadUnsubs = {};
+        function startCloudThreadsForKnownUsers(){ const me=getCurrentUser(); if(!me)return; state.users.filter(u=>u.id!==me.id).forEach(u=>startCloudThreadSync(u.id)); }
+        async function startCloudThreadSync(userId){
+            const tid=cloudThreadIdWith(userId); if(!tid || cloudThreadUnsubs[tid]) return; await waitForFirebaseCloud(6000);
+            try { if(window.chatgramCloudStartThreadSync) cloudThreadUnsubs[tid]=window.chatgramCloudStartThreadSync(tid, msgs=>mergeCloudMessages(userId,msgs)); } catch(e){ console.warn('Cloud thread listen failed', e); }
+        }
+        function mergeCloudMessages(userId, cloudMsgs){
+            const msgs=getThreadWith(userId); let changed=false;
+            cloudMsgs.forEach(m=>{
+                if(msgs.some(x=>x.cloudMsgId===m.id)) return;
+                const sender=state.users.find(u=>accountId(u)===m.senderPublicId); const receiver=state.users.find(u=>accountId(u)===m.receiverPublicId);
+                msgs.push({id:Date.now()+Math.random(), cloudMsgId:m.id, text:m.text||'', media:m.media||'', mediaType:m.mediaType||'', senderId:sender?.id||userId, receiverId:receiver?.id||getCurrentUser()?.id, createdAt:m.createdAtClient||Date.now(), readBy:[]}); changed=true;
+            });
+            if(changed){ msgs.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); saveState(); if(state.currentPage==='messages' && state.activeChat===Number(userId)) openChat(userId); else updateBadges(); }
+        }
+        let cloudCallUnsub=null;
+        async function startCloudCallListener(){
+            const me=getCurrentUser(); if(!me||!state.cloudSyncEnabled) return; await waitForFirebaseCloud(6000);
+            try { if(!cloudCallUnsub && window.chatgramCloudListenCalls) cloudCallUnsub=window.chatgramCloudListenCalls(accountId(me), incomingCloudCalls); } catch(e){ console.warn('Cloud call listen failed', e); }
+        }
+        function incomingCloudCalls(calls){
+            calls.forEach(c=>{ if(sessionStorage.getItem('seen_call_'+c.id)) return; sessionStorage.setItem('seen_call_'+c.id,'1'); const caller=state.users.find(u=>accountId(u)===c.callerPublicId); pushLocalNotification('Incoming Chatgram call', (caller?.username||'Someone')+' is calling'); if(confirm((caller?.username||'Someone')+' is calling. Accept?')) startVoiceCall(caller?.id||0, true, c.id); else window.chatgramCloudUpdateCall?.(c.id,{status:'declined'}); });
         }
         function avatarFor(username) {
             const text = (username || 'U').slice(0,2).toUpperCase();
@@ -2353,6 +2454,7 @@
             state.users.push(user);
             logHistory('Account created');
             state.currentUserId = user.id;
+            markDeviceAccount(user);
             sessionStorage.setItem('chatgram_session_user', user.id);
             logHistory('Logged in');
             saveState();
@@ -2423,6 +2525,7 @@
                 if(displayName && (!user.fullName || user.fullName===user.username)) user.fullName = displayName;
             }
             state.currentUserId = user.id;
+            markDeviceAccount(user);
             sessionStorage.setItem('chatgram_session_user', user.id);
             logHistory('Logged in with Firebase Google');
             saveState();
@@ -2473,6 +2576,7 @@
             if (user.password && user.password !== password) return alert('Wrong password.');
             if (!await verifySandboxOTP(user.email)) return alert('Wrong sandbox OTP.');
             state.currentUserId = user.id;
+            markDeviceAccount(user);
             sessionStorage.setItem('chatgram_session_user', user.id);
             logHistory('Logged in');
             saveState();
@@ -2518,6 +2622,9 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             ensureCreateControls();
             updateAnnouncementBar();
             startCloudUsersSync();
+            startCloudPostsSync();
+            startCloudCallListener();
+            setTimeout(startCloudThreadsForKnownUsers, 2500);
             syncCurrentUserToCloudSoon();
             if(!state.largeStorageMode) enableLargeStorageMode(false);
             loadAllMedia().then(() => {
@@ -2565,6 +2672,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             return state.posts.filter(p => ['post','reel'].includes(p.type) && (allowed.has(p.userId) || state.privacy === 'public')).sort((a,b)=>b.id-a.id);
         }
         function renderStories() {
+            cleanupExpiredStories();
             const me = getCurrentUser(); const container = document.getElementById('storiesContainer');
             let html = `<div class="story-item" onclick="openCreateModal('story')"><div class="story-ring no-story"><img src="${me.avatar}" alt=""><div class="story-add">+</div></div><span class="story-name">Your story</span></div>`;
             const allowed = new Set([me.id, ...(me.followingIds || [])]);
@@ -2575,7 +2683,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             container.innerHTML = html;
         }
         function renderMedia(item, cls='post-image') {
-            const src = item.mediaKey ? (mediaCache[item.mediaKey] || '') : (item.media || item.image || '');
+            const src = item.cloudMediaUrl || (item.mediaKey ? (mediaCache[item.mediaKey] || '') : (item.media || item.image || ''));
             if (!src && item.mediaKey) {
                 loadMediaBlobUrl(item.mediaKey).then(() => navigateTo(state.currentPage || 'feed'));
                 return `<div class="empty-state" style="margin:0;min-height:220px;display:flex;align-items:center;justify-content:center">Loading media...</div>`;
@@ -2583,7 +2691,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             return item.mediaType === 'video' ? `<video class="${cls}" src="${src}" controls playsinline preload="metadata"></video>${item.duration ? `<span class="media-duration">${formatDuration(item.duration)}</span>` : ''}` : `<img class="${cls}" src="${src}" alt="" loading="lazy">`;
         }
         function renderReelMedia(item) {
-            const src = item.mediaKey ? (mediaCache[item.mediaKey] || '') : (item.media || item.image || '');
+            const src = item.cloudMediaUrl || (item.mediaKey ? (mediaCache[item.mediaKey] || '') : (item.media || item.image || ''));
             if (!src && item.mediaKey) {
                 loadMediaBlobUrl(item.mediaKey).then(()=>renderReels());
                 return `<div class="empty-state" style="height:100%;display:flex;align-items:center;justify-content:center">Loading reel...</div>`;
@@ -2705,7 +2813,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         }
         function startChat(userId) { getThreadWith(userId); saveState(); navigateTo('messages'); setTimeout(()=>openChat(userId), 30); }
         function openChat(userId) {
-            state.activeChat = Number(userId); const u=byId(userId), me=getCurrentUser(); if(!u||!me) return; const msgs=getThreadWith(userId);
+            state.activeChat = Number(userId); startCloudThreadSync(userId); const u=byId(userId), me=getCurrentUser(); if(!u||!me) return; const msgs=getThreadWith(userId);
             msgs.forEach(m=>{ m.readBy ||= []; if(!m.readBy.includes(me.id)) m.readBy.push(me.id); }); saveState(); updateBadges();
             let lastDay='';
             const htmlMsgs = msgs.map(m=>{
@@ -2720,7 +2828,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const input=document.getElementById('chatInput'); let text=input?.value.trim(); const me=getCurrentUser(); if(!text||!state.activeChat||!me)return;
             try { text=firewallText(text); } catch(e){ return alert(e.message); }
             const msgs=getThreadWith(state.activeChat);
-            msgs.push({id:Date.now(), text, senderId:me.id, receiverId:Number(state.activeChat), createdAt:Date.now(), readBy:[me.id]});
+            const mid=Date.now(); msgs.push({id:mid, text, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
+            const other=byId(state.activeChat); if(other && window.chatgramCloudAddMessage){ window.chatgramCloudAddMessage(cloudThreadIdWith(state.activeChat), {text, senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid}).catch(console.warn); }
             logHistory('Message sent'); input.value=''; saveState(); notifyRealtime('message'); openChat(state.activeChat);
         }
         async function sendMediaMessage(e){
@@ -2730,7 +2839,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 await saveMediaBlob(mediaKey, file);
                 mediaCache[mediaKey] = URL.createObjectURL(file);
                 const msgs=getThreadWith(state.activeChat);
-                msgs.push({id:Date.now(), text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:Date.now(), readBy:[me.id]});
+                const mid=Date.now(); msgs.push({id:mid, text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
+                try { if(window.chatgramCloudUploadMedia){ let url=''; try{ url=await window.chatgramCloudUploadMedia('dm/'+accountId(me)+'/'+mid+'_'+file.name, file); } catch(upErr){ if(file.size < 650000) url=await new Promise(res=>{ const r=new FileReader(); r.onload=ev=>res(ev.target.result); r.readAsDataURL(file); }); else throw upErr; } const other=byId(state.activeChat); await window.chatgramCloudAddMessage(cloudThreadIdWith(state.activeChat), {text:file.name, media:url, mediaType:file.type.startsWith('video')?'video':'image', senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid}); } } catch(e){ console.warn('Cloud media message upload failed', e); alert('Media cloud upload failed. Configure Cloudinary in Settings or use smaller image under 650KB.'); }
                 logHistory('Large media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat);
             } catch(err){
                 alert('Device/browser storage quota full. Please free storage and try again.');
@@ -2738,8 +2848,9 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             e.target.value='';
         }
         let callTimerInt=null, callStarted=0, callStream=null, callMuted=false;
-        async function startVoiceCall(userId){
+        async function startVoiceCall(userId, incoming=false, callId=''){
             const u=byId(userId); if(!u)return;
+            if(!incoming && window.chatgramCloudCreateCall){ const me=getCurrentUser(); window.chatgramCloudCreateCall({callerPublicId:accountId(me), receiverPublicId:accountId(u), callerName:me.username, status:'ringing', createdAtClient:Date.now()}).catch(console.warn); }
             document.getElementById('callAvatar').src=u.avatar;
             document.getElementById('callName').textContent='Calling '+u.username;
             document.getElementById('callTimer').textContent='Requesting microphone...';
@@ -2791,10 +2902,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const row=document.createElement('div'); row.className='social-share-row'; row.innerHTML=`<button class="share-chip" onclick="window.open('${wa}','_blank')">WhatsApp</button><button class="share-chip" onclick="window.open('${tw}','_blank')">Twitter</button><button class="share-chip" onclick="location.href='${mail}'">Email</button><button class="share-chip" onclick="navigator.clipboard?.writeText('${url}')">Copy Link</button>`; document.body.appendChild(row); setTimeout(()=>row.remove(),12000);
         }
         function openSwitchAccount(){
-            const html=state.users.map(u=>`<div class="switch-account-card"><img src="${u.avatar}"><div style="flex:1"><b>${escapeHTML(u.username)}</b><br><small>${escapeHTML(u.email||'')} · ${accountId(u)}</small></div><button class="mini-btn" onclick="switchToAccount(${u.id})">Switch</button></div>`).join('');
+            const ownAccounts=state.users.filter(u=>!u.cloudOnly && (state.deviceAccounts||[]).includes((u.email||String(u.id)).toLowerCase())); const html=ownAccounts.map(u=>`<div class="switch-account-card"><img src="${u.avatar}"><div style="flex:1"><b>${escapeHTML(u.username)}</b><br><small>${escapeHTML(u.email||'')} · ${accountId(u)}</small></div><button class="mini-btn" onclick="switchToAccount(${u.id})">Switch</button></div>`).join('');
             document.getElementById('profileContent').innerHTML=`<div class="page-header"><button class="back-btn" onclick="renderProfile()">← Back</button><h1>Switch account</h1></div><div class="settings-card">${html || 'No account available'}<button class="mini-btn secondary" onclick="handleLogout();showSignup()">Add account</button></div>`;
         }
-        function switchToAccount(id){ const u=byId(id); if(!u)return; state.currentUserId=u.id; sessionStorage.setItem('chatgram_session_user', u.id); logHistory('Switched account to '+u.username); saveState(); showApp(); }
+        function switchToAccount(id){ const u=byId(id); if(!u)return; state.currentUserId=u.id; markDeviceAccount(u); sessionStorage.setItem('chatgram_session_user', u.id); logHistory('Switched account to '+u.username); saveState(); showApp(); }
         function showUserList(type,userId){ const u=byId(userId)||getCurrentUser(); const ids=type==='followers'?(u.followerIds||[]):((u.followingIds||[])); const list=ids.map(id=>byId(id)).filter(Boolean); document.getElementById('profileContent').innerHTML=`<div class="page-header"><button class="back-btn" onclick="renderProfile(${u.id})">← Back</button><h1>${type}</h1></div><div>${list.length?list.map(renderAccountCard).join(''):'<div class="empty-state"><h3>No users</h3></div>'}</div>`; }
         function editProfile() {
             navigateTo('profile');
@@ -2851,14 +2962,33 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const analyticsMini = `<div class="settings-card"><div class="settings-row"><div><b>Creator Analytics</b><small>${myPosts.length} posts/reels · ${formatNumber(totalLikes)} likes · ${formatNumber(totalComments)} comments</small></div><button class="mini-btn" onclick="navigateTo('analytics')">Open Analytics</button></div></div>`;
             const storagePanel = `<div class="settings-card"><div class="settings-row"><div><b>Large Storage Mode</b><small>For 10-20GB large media, Chatgram requests maximum browser persistent quota and stores media as IndexedDB blobs.</small><div id="storageInfoText" class="notification-status">Tap check to see available quota.</div><div class="storage-meter"><span id="storageMeterBar"></span></div></div><div class="admin-actions"><button class="mini-btn" onclick="enableLargeStorageMode(true)">Enable Max Storage</button><button class="mini-btn secondary" onclick="showStorageInfo()">Check Space</button></div></div></div>`;
             const cloudPanel = `<div class="settings-card"><div class="settings-row"><div><b>Cloud Account Sync</b><small>Firebase Firestore se accounts dusre devices par search/profile me show honge. Fresh collection active: old accounts hidden.</small><div class="notification-status">Status: ${state.cloudSyncEnabled?'Enabled':'Disabled'} · Cloud users loaded: ${state.users.filter(x=>x.cloudOnly).length}</div></div><div class="admin-actions"><button class="mini-btn" onclick="state.cloudSyncEnabled=true;saveState();syncCurrentUserToCloud();startCloudUsersSync();renderSettings()">Enable Sync</button><button class="mini-btn secondary" onclick="state.cloudSyncEnabled=false;saveState();renderSettings()">Disable</button><button class="mini-btn secondary" onclick="syncCurrentUserToCloud();startCloudUsersSync()">Sync Now</button></div></div></div>`;
+            const cloudinaryPanel = `<div class="settings-card"><h2>Media Cloud without Firebase Storage</h2><small style="color:var(--text-muted)">Firebase Storage subscription maang raha hai? Cloudinary free unsigned upload use karo. Cloud name aur unsigned upload preset save karo; posts/reels/DM media cloud me show honge.</small><input id="cloudinaryCloudName" class="settings-search-box" placeholder="Cloudinary cloud name" value="${escapeHTML(state.cloudinary?.cloudName||'')}"><input id="cloudinaryUploadPreset" class="settings-search-box" placeholder="Unsigned upload preset" value="${escapeHTML(state.cloudinary?.uploadPreset||'')}"><button class="mini-btn" style="margin-top:10px" onclick="saveCloudinarySettings()">Save Cloudinary</button></div>`;
             const historyPanel = `<div class="settings-card"><div class="settings-row"><div><b>History</b><small>Recent account activity</small></div><button class="mini-btn secondary" onclick="clearHistory()">Clear</button></div>${(state.history||[]).slice(0,12).map(h=>`<div class="history-item"><b>${escapeHTML(h.action)}</b><br>${escapeHTML(h.time)} · ${escapeHTML(h.user)}</div>`).join('') || '<small style="color:var(--text-muted)">No history yet.</small>'}</div>`;
             const contactPanel = `<div class="settings-card"><div class="settings-row"><div><b>Contact us</b><small>Report issue or share your problem by Gmail.</small></div><button class="mini-btn" onclick="location.href='mailto:amrendrakumarsingh6856@gmail.com?subject=Chatgram%20Support&body=Please%20describe%20your%20problem...'">Contact Gmail</button></div></div>`;
             const firewallPanel = `<div class="settings-card"><div class="settings-row"><div><b>Chatgram Firewall</b><small>Client-side protection: unsafe script text blocking, OTP verification, duplicate email check, session isolation and input escaping are active.</small></div><button class="mini-btn secondary" onclick="alert('Firewall active: XSS text filter, OTP sandbox, duplicate email guard, safe rendering, notification permission control.')">View</button></div></div>`;
             const ownerStats = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Total users</h2><div class="analytics-grid"><div class="metric-card"><b>${state.users.length}</b><span>Active users</span></div><div class="metric-card"><b>${(state.deletedUsers||[]).length}</b><span>Past/deleted users</span></div></div><div>${state.users.map(x=>`<div class="history-item">${escapeHTML(x.username)} · ${escapeHTML(x.email||'no email')} · ${accountId(x)}</div>`).join('')}</div></div>` : '';
             const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">👑 Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Only owner email <b>${OWNER_EMAIL}</b> can manage badges, bans and announcements.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify ✓</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button></div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
-            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${storagePanel}${cloudPanel}${contactPanel}${firewallPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Separate video/photo browse buttons added. If mobile gallery hides videos, use Browse Video button.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
+            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${storagePanel}${cloudPanel}${cloudinaryPanel}${contactPanel}${firewallPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Separate video/photo browse buttons added. If mobile gallery hides videos, use Browse Video button.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
         }
         async function showStorageInfo(){ const info=await getStorageInfo(); const text=document.getElementById('storageInfoText'), bar=document.getElementById('storageMeterBar'); if(text) text.textContent=`Used ${gb(info.usage)} of ${gb(info.quota)} (${info.percent}%)`; if(bar) bar.style.width=info.percent+'%'; }
+        async function cloudinaryUpload(file, path='chatgram-media'){
+            const cfg=state.cloudinary||{};
+            if(!cfg.cloudName || !cfg.uploadPreset) throw new Error('Cloudinary not configured');
+            const fd=new FormData();
+            fd.append('file', file);
+            fd.append('upload_preset', cfg.uploadPreset);
+            fd.append('folder', 'chatgram');
+            const res=await fetch(`https://api.cloudinary.com/v1_1/${cfg.cloudName}/auto/upload`, {method:'POST', body:fd});
+            const data=await res.json();
+            if(!res.ok) throw new Error(data.error?.message || 'Cloudinary upload failed');
+            return data.secure_url;
+        }
+        window.chatgramExternalMediaUpload = cloudinaryUpload;
+        function saveCloudinarySettings(){
+            const cloudName=document.getElementById('cloudinaryCloudName')?.value.trim();
+            const uploadPreset=document.getElementById('cloudinaryUploadPreset')?.value.trim();
+            state.cloudinary={cloudName, uploadPreset}; saveState(); alert('Cloudinary media upload settings saved.'); renderSettings();
+        }
         function clearHistory(){ state.history=[]; saveState(); renderSettings(); }
         function filterSettingsSearch(){
             const q=(document.getElementById('settingsSearchInput')?.value||'').toLowerCase().trim();
@@ -2878,7 +3008,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if(!target) return alert('User not found. Enter exact username or CG-ID.');
             if(target.isOwner && !makeVip) return alert('Owner VIP cannot be removed.');
             target.isVip=!!makeVip;
-            saveState(); renderSettings();
+            saveState(); window.chatgramCloudUpsertUser?.(userPublicProfile(target)); renderSettings();
             alert(`${target.username} ${makeVip?'is now VIP 💎':'VIP removed'}`);
         }
         function setVerifiedFromPanel(makeVerified){
@@ -2886,7 +3016,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const target=findUserByUsernameOrId(document.getElementById('vipTarget').value);
             if(!target) return alert('User not found.');
             if(target.isOwner && !makeVerified) return alert('Owner verification cannot be removed.');
-            target.isVerified=!!makeVerified; saveState(); renderSettings();
+            target.isVerified=!!makeVerified; saveState(); window.chatgramCloudUpsertUser?.(userPublicProfile(target)); renderSettings();
         }
         function setBanFromPanel(makeBanned){
             if(!isOwnerUser()) return alert('Only owner can ban/unban.');
@@ -2944,7 +3074,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 if(!del){ del=document.createElement('button'); del.id='storyDeleteBtn'; del.className='story-delete-btn'; top.insertBefore(del, document.querySelector('.story-close-btn')); }
                 del.textContent='Remove'; del.onclick=(e)=>{e.stopPropagation(); removeStory(st.id);}; del.style.display='block';
             } else if(del) del.style.display='none';
-            const old=document.getElementById('storyImage'); const src = st.mediaKey ? await loadMediaBlobUrl(st.mediaKey) : st.media;
+            const old=document.getElementById('storyImage'); const src = st.cloudMediaUrl || (st.mediaKey ? await loadMediaBlobUrl(st.mediaKey) : st.media);
             const media=st.mediaType==='video'?`<video class="story-image" id="storyImage" src="${src}" autoplay playsinline preload="metadata" onclick="this.paused?this.play():this.pause()"></video>`:`<img class="story-image" id="storyImage" src="${src}" alt="">`;
             old.outerHTML=media;
             document.querySelectorAll('.sticker').forEach(x=>x.remove());
@@ -3025,10 +3155,13 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             try {
                 await saveMediaBlob(mediaKey, selectedFile);
                 mediaCache[mediaKey] = URL.createObjectURL(selectedFile);
+                let cloudMediaUrl = '';
+                try { if(window.chatgramCloudUploadMedia) cloudMediaUrl = await window.chatgramCloudUploadMedia((createType==='story'?'stories/':'posts/') + accountId(me) + '/' + id + '_' + selectedFile.name, selectedFile); } catch(e){ console.warn('Cloud media upload failed', e); if(selectedFile.size < 650000) cloudMediaUrl = await new Promise(res=>{ const r=new FileReader(); r.onload=ev=>res(ev.target.result); r.readAsDataURL(selectedFile); }); }
                 if(createType==='story'){
-                    state.stories.unshift({id,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,mediaType:selectedMediaType,duration:selectedDuration,stickers:{poll:document.getElementById('pollSticker')?.value.trim()||'',question:document.getElementById('questionSticker')?.value.trim()||'',link:document.getElementById('linkSticker')?.value.trim()||''},fileName:selectedFile.name,fileSize:selectedFile.size,time:timeNow(),viewedBy:[me.id]});
+                    const newStory={id,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,cloudMediaUrl,mediaType:selectedMediaType,duration:selectedDuration,stickers:{poll:document.getElementById('pollSticker')?.value.trim()||'',question:document.getElementById('questionSticker')?.value.trim()||'',link:document.getElementById('linkSticker')?.value.trim()||''},fileName:selectedFile.name,fileSize:selectedFile.size,time:timeNow(),expiresAt:id+24*60*60*1000,viewedBy:[me.id]};
+                    state.stories.unshift(newStory); syncStoryToCloud(newStory);
                 } else {
-                    state.posts.unshift({id,type:createType,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,mediaType:selectedMediaType,duration:selectedDuration,fileName:selectedFile.name,fileSize:selectedFile.size,caption,location:null,likedBy:[],savedBy:[],comments:[],time:timeNow()});
+                    const newPost={id,type:createType,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,cloudMediaUrl,mediaType:selectedMediaType,duration:selectedDuration,fileName:selectedFile.name,fileSize:selectedFile.size,caption,location:null,likedBy:[],savedBy:[],comments:[],time:timeNow()}; state.posts.unshift(newPost); syncPostToCloud(newPost);
                 }
                 saveState(); closeCreateModal(); navigateTo(createType==='reel'?'reels':'feed');
             } catch(err) {
