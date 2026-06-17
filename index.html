@@ -1878,8 +1878,10 @@
         @keyframes savePop { 0%{opacity:0;transform:translate(-50%,20px) scale(.95)} 15%,80%{opacity:1;transform:translate(-50%,0) scale(1)} 100%{opacity:0;transform:translate(-50%,20px) scale(.95)} }
 
 
-        /* ============ TRONIX TEMPORARILY REMOVED ============ */
-        #aiChat, .ai-fab { display:none!important; }
+        /* ============ TRONIX POSITION CUSTOMIZER ============ */
+        .ai-fab { touch-action:none; user-select:none; }
+        .ai-fab.dragging { opacity:.82; transform:scale(1.08)!important; }
+        .ai-position-hint { position:fixed; z-index:10002; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.82); color:#fff; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:9px 13px; font-size:12px; font-weight:800; display:none; pointer-events:none; backdrop-filter:blur(12px); }
     </style>
 </head>
 <body>
@@ -2172,11 +2174,12 @@
         </div>
     </div>
 
-    <button class="ai-fab" onclick="toggleAIChat()">🤖</button>
+    <button id="aiFab" class="ai-fab" onclick="toggleAIChat()" title="Drag to set Tronix position">🤖</button>
+    <div id="aiPositionHint" class="ai-position-hint">Drag Tronix anywhere — position saved on this device</div>
     <div id="aiChat" class="ai-chat">
         <div class="ai-head">
             <div class="tronix-brand"><div class="tronix-orb">T</div><div><div class="tronix-title">Tronix AI</div><div class="tronix-sub">Advanced reasoning assistant</div></div></div>
-            <div style="display:flex;gap:8px;align-items:center"><button class="mini-btn secondary" style="width:auto;padding:6px 10px;font-size:12px" onclick="setOpenAIKey()">API Key</button><button class="modal-close" onclick="toggleAIChat()">×</button></div>
+            <div style="display:flex;gap:8px;align-items:center"><button class="mini-btn secondary" style="width:auto;padding:6px 10px;font-size:12px" onclick="setOpenAIKey()">API Key</button><button class="mini-btn secondary" style="width:auto;padding:6px 10px;font-size:12px" onclick="resetTronixPosition()">Reset</button><button class="modal-close" onclick="toggleAIChat()">×</button></div>
         </div>
         <div id="aiChatBody" class="ai-body"><div class="ai-msg bot">Hi, main Tronix hoon. Complex questions ke liye detailed step-by-step answer de sakta hoon: coding, business, study, debugging, planning, captions, reels growth — sab.</div></div>
         <div class="ai-tools"><button class="ai-chip" onclick="askTronixPreset('Explain this step by step: ')">Step-by-step</button><button class="ai-chip" onclick="askTronixPreset('Debug this problem: ')">Debug</button><button class="ai-chip" onclick="askTronixPreset('Make a complete plan for: ')">Plan</button><button class="ai-chip" onclick="clearTronixChat()">Clear</button></div>
@@ -2238,14 +2241,21 @@
             }, err => console.warn('Cloud users sync error', err));
         };
         window.chatgramCloudUploadMedia = async function(path, blob) {
+            // Upload order: Supabase first, Firebase Storage only if Supabase fails.
+            if (window.chatgramExternalMediaUpload) {
+                try {
+                    return await window.chatgramExternalMediaUpload(blob, path);
+                } catch (supabaseErr) {
+                    console.warn('Supabase Storage upload failed, trying Firebase Storage fallback', supabaseErr);
+                }
+            }
             try {
                 const r = storageRef(fbStorage, path);
                 await uploadBytes(r, blob);
                 return await getDownloadURL(r);
-            } catch (err) {
-                console.warn('Firebase Storage upload failed, trying external media uploader', err);
-                if (window.chatgramExternalMediaUpload) return await window.chatgramExternalMediaUpload(blob, path);
-                throw err;
+            } catch (firebaseErr) {
+                console.warn('Firebase Storage fallback failed', firebaseErr);
+                throw firebaseErr;
             }
         };
         window.chatgramCloudUpsertPost = async function(post) {
@@ -2313,6 +2323,10 @@
         const DB_KEY = 'chatgram_real_state_v4_fresh';
         const OLD_KEY = 'chatgram_state';
         const OWNER_EMAIL = 'abhishekkumarsingh6856@gmail.com';
+        // Supabase Storage for media uploads (Firebase Storage alternative)
+        const SUPABASE_URL = 'https://wsgldskfyuoqkzlajamv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzZ2xkc2tmeXVvcWt6bGFqYW12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MDExMDksImV4cCI6MjA5NzI3NzEwOX0.9Tptz8MDl7XlGpF2XsixrXmkRw6-48oV4kUpWQ2Q5Io';
+        const SUPABASE_BUCKET = 'Chatgram-media';
 
         let state = {
             currentUserId: null,
@@ -3077,7 +3091,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 const menuId='msgMenu_'+String(m.id).replace(/\W/g,'_');
                 return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?'<span class="msg-status">✓✓</span>':''}</div></div>`;
             }).join('');
-            document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="alert('Media sharing is blocked because of storage issue. Text messages are fully working.')">Media</button><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
+            document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.m4v,.webm" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
             renderMessages(); setTimeout(()=>{const c=document.getElementById('chatMessages'); if(c) c.scrollTop=c.scrollHeight;},50);
         }
         function sendMessage() {
@@ -3109,16 +3123,32 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         async function sendMediaMessage(e){
             const file=e.target.files[0], me=getCurrentUser(); if(!file||!state.activeChat||!me)return;
             const mediaKey = 'dm_' + me.id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            const mid=Date.now();
+            const other=byId(state.activeChat);
             try {
-                if(!await ensureUserStoragePermission(file.size)) return;
-                await saveMediaBlob(mediaKey, file);
+                try { await saveMediaBlob(mediaKey, file); } catch(localErr) { console.warn('Local media save failed; using temporary preview', localErr); }
                 mediaCache[mediaKey] = URL.createObjectURL(file);
                 const msgs=getThreadWith(state.activeChat);
-                const mid=Date.now(); msgs.push({id:mid, text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
-                try { if(window.chatgramCloudUploadMedia){ let url=''; try{ url=await window.chatgramCloudUploadMedia('dm/'+accountId(me)+'/'+mid+'_'+file.name, file); } catch(upErr){ if(file.size < 650000) url=await new Promise(res=>{ const r=new FileReader(); r.onload=ev=>res(ev.target.result); r.readAsDataURL(file); }); else throw upErr; } const other=byId(state.activeChat); const cid=await window.chatgramCloudAddMessage(cloudThreadIdWith(state.activeChat), {text:file.name, media:url, mediaType:file.type.startsWith('video')?'video':'image', senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, deletedForPublic:[]}); const mm=msgs.find(x=>x.id===mid); if(mm) mm.cloudMsgId=cid; } } catch(e){ console.warn('Cloud media message upload failed', e); alert('Media cloud upload failed. Configure Cloudinary in Settings or use smaller image under 650KB.'); }
-                logHistory('Large media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat);
+                msgs.push({id:mid, text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
+                logHistory('Media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat);
+                // Upload to Supabase first, Firebase fallback second, then send cloud message for other devices.
+                setTimeout(async()=>{
+                    try {
+                        let url='';
+                        if(window.chatgramCloudUploadMedia) url=await window.chatgramCloudUploadMedia('dm/'+accountId(me)+'/'+mid+'_'+file.name, file);
+                        if(!url && file.size < 650000) url=await new Promise(res=>{ const r=new FileReader(); r.onload=ev=>res(ev.target.result); r.readAsDataURL(file); });
+                        if(url && other && window.chatgramCloudAddMessage){
+                            const cid=await window.chatgramCloudAddMessage(cloudThreadIdWith(other.id), {text:file.name, media:url, mediaType:file.type.startsWith('video')?'video':'image', senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, deletedForPublic:[]});
+                            const mm=getThreadWith(other.id).find(x=>x.id===mid); if(mm){ mm.cloudMsgId=cid; mm.media=url; saveState(); }
+                        }
+                    } catch(uploadErr){
+                        console.warn('Media cloud upload failed', uploadErr);
+                        alert('Media selected and shown on this device, but cloud upload failed. Check Supabase bucket policy/name if other device cannot see it.');
+                    }
+                }, 50);
             } catch(err){
-                alert('Device/browser storage quota full. Please free storage and try again.');
+                console.error(err);
+                alert('Media send failed. Please try a smaller file or check browser storage.');
             }
             e.target.value='';
         }
@@ -3277,24 +3307,36 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
         }
         async function showStorageInfo(){ const info=await getStorageInfo(); const text=document.getElementById('storageInfoText'), bar=document.getElementById('storageMeterBar'); if(text) text.textContent=`Used ${gb(info.usage)} of ${gb(info.quota)} (${info.percent}%)`; if(bar) bar.style.width=info.percent+'%'; }
-        async function cloudinaryUpload(file, path='chatgram-media'){
-            const cfg=state.cloudinary||{};
-            if(!cfg.cloudName || !cfg.uploadPreset) throw new Error('Cloudinary not configured');
-            const fd=new FormData();
-            fd.append('file', file);
-            fd.append('upload_preset', cfg.uploadPreset);
-            fd.append('folder', 'chatgram');
-            const res=await fetch(`https://api.cloudinary.com/v1_1/${cfg.cloudName}/auto/upload`, {method:'POST', body:fd});
-            const data=await res.json();
-            if(!res.ok) throw new Error(data.error?.message || 'Cloudinary upload failed');
-            return data.secure_url;
+        function safeStoragePath(path, file){
+            const ext = (file?.name || 'media').split('.').pop().replace(/[^a-zA-Z0-9]/g,'') || 'bin';
+            const base = String(path || ('chatgram/'+Date.now()))
+                .replace(/^\/+/, '')
+                .replace(/[^a-zA-Z0-9_./-]/g, '_')
+                .replace(/\s+/g, '_');
+            return base.includes('.') ? base : (base + '.' + ext);
         }
-        window.chatgramExternalMediaUpload = cloudinaryUpload;
-        function saveCloudinarySettings(){
-            const cloudName=document.getElementById('cloudinaryCloudName')?.value.trim();
-            const uploadPreset=document.getElementById('cloudinaryUploadPreset')?.value.trim();
-            state.cloudinary={cloudName, uploadPreset}; saveState(); alert('Cloudinary media upload settings saved.'); renderSettings();
+        async function supabaseStorageUpload(file, path='chatgram-media'){
+            if(!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_BUCKET) throw new Error('Supabase Storage is not configured');
+            const objectPath = safeStoragePath(path, file);
+            const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+            const res = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Content-Type': file.type || 'application/octet-stream',
+                    'x-upsert': 'true'
+                },
+                body: file
+            });
+            if(!res.ok){
+                const msg = await res.text().catch(()=> '');
+                throw new Error('Supabase upload failed: ' + msg);
+            }
+            return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
         }
+        window.chatgramExternalMediaUpload = supabaseStorageUpload;
+        function saveCloudinarySettings(){ alert('Supabase Storage is now configured in code. Bucket: '+SUPABASE_BUCKET); }
         function clearHistory(){ state.history=[]; saveState(); renderSettings(); }
         function filterSettingsSearch(){
             const q=(document.getElementById('settingsSearchInput')?.value||'').toLowerCase().trim();
@@ -3604,7 +3646,35 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             return 'Smart suggestion: consistent posting, clean thumbnails, strong hooks, and replying to comments will boost engagement.';
         }
 
+
+        function applyTronixPosition(){
+            const fab=document.getElementById('aiFab'), chat=document.getElementById('aiChat'); if(!fab||!chat)return;
+            const pos=JSON.parse(localStorage.getItem('tronix_position')||'null');
+            if(pos){
+                const x=Math.min(Math.max(8,pos.x), window.innerWidth-70), y=Math.min(Math.max(8,pos.y), window.innerHeight-70);
+                fab.style.left=x+'px'; fab.style.top=y+'px'; fab.style.right='auto'; fab.style.bottom='auto';
+                const chatW=Math.min(520, window.innerWidth-24), chatH=Math.min(720, window.innerHeight-110);
+                let cx=x-chatW+62, cy=y-chatH-12;
+                if(cx<8) cx=8; if(cy<8) cy=8; if(cx+chatW>window.innerWidth-8) cx=window.innerWidth-chatW-8;
+                chat.style.left=cx+'px'; chat.style.top=cy+'px'; chat.style.right='auto'; chat.style.bottom='auto';
+            }
+        }
+        function resetTronixPosition(){ localStorage.removeItem('tronix_position'); const fab=document.getElementById('aiFab'), chat=document.getElementById('aiChat'); if(fab){fab.style.left='';fab.style.top='';fab.style.right='';fab.style.bottom='';} if(chat){chat.style.left='';chat.style.top='';chat.style.right='';chat.style.bottom='';} alert('Tronix position reset.'); }
+        function setupTronixDrag(){
+            const fab=document.getElementById('aiFab'), hint=document.getElementById('aiPositionHint'); if(!fab)return;
+            let dragging=false, moved=false, offX=0, offY=0;
+            const down=e=>{ dragging=true; moved=false; fab.classList.add('dragging'); if(hint)hint.style.display='block'; const p=e.touches?e.touches[0]:e; const r=fab.getBoundingClientRect(); offX=p.clientX-r.left; offY=p.clientY-r.top; };
+            const move=e=>{ if(!dragging)return; moved=true; e.preventDefault(); const p=e.touches?e.touches[0]:e; let x=p.clientX-offX, y=p.clientY-offY; x=Math.min(Math.max(8,x), window.innerWidth-70); y=Math.min(Math.max(8,y), window.innerHeight-70); fab.style.left=x+'px'; fab.style.top=y+'px'; fab.style.right='auto'; fab.style.bottom='auto'; localStorage.setItem('tronix_position', JSON.stringify({x,y})); applyTronixPosition(); };
+            const up=e=>{ if(!dragging)return; dragging=false; fab.classList.remove('dragging'); if(hint)hint.style.display='none'; if(moved){ e.preventDefault?.(); setTimeout(()=>{ moved=false; },80); } };
+            fab.addEventListener('mousedown',down); window.addEventListener('mousemove',move,{passive:false}); window.addEventListener('mouseup',up);
+            fab.addEventListener('touchstart',down,{passive:true}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up,{passive:false});
+            fab.addEventListener('click',e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); } });
+            window.addEventListener('resize',applyTronixPosition);
+            applyTronixPosition();
+        }
+        setTimeout(setupTronixDrag, 500);
+
         init();
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0d3544cec9f7083',t:'MTc4MTcxMjY3Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
