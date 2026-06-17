@@ -1876,6 +1876,10 @@
         .saved-empty { color:var(--text-muted); font-size:13px; padding:12px 0; }
         .save-toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); z-index:10000; padding:11px 16px; border-radius:999px; background:rgba(255,255,255,.95); color:#000; font-weight:950; box-shadow:0 15px 50px rgba(0,0,0,.45); animation:savePop 1.8s ease forwards; }
         @keyframes savePop { 0%{opacity:0;transform:translate(-50%,20px) scale(.95)} 15%,80%{opacity:1;transform:translate(-50%,0) scale(1)} 100%{opacity:0;transform:translate(-50%,20px) scale(.95)} }
+
+
+        /* ============ TRONIX TEMPORARILY REMOVED ============ */
+        #aiChat, .ai-fab { display:none!important; }
     </style>
 </head>
 <body>
@@ -2184,7 +2188,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
         import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp, addDoc, orderBy, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp, addDoc, orderBy, query, where, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -2247,6 +2251,10 @@
         window.chatgramCloudUpsertPost = async function(post) {
             if(!post || !post.id) return;
             await setDoc(doc(db, POSTS_COLLECTION, String(post.id)), {...post, updatedAt: serverTimestamp()}, {merge:true});
+        };
+        window.chatgramCloudDeletePost = async function(postId) {
+            if(!postId) return;
+            await deleteDoc(doc(db, POSTS_COLLECTION, String(postId)));
         };
         window.chatgramCloudStartPostsSync = function(callback) {
             return onSnapshot(collection(db, POSTS_COLLECTION), snap => callback(snap.docs.map(d=>({...d.data(), cloudId:d.id}))), err=>console.warn('Cloud posts sync error', err));
@@ -2582,13 +2590,15 @@
         function mergeCloudPosts(list){
             if(!Array.isArray(list)) return; let changed=false;
             list.forEach(cp=>{
-                if(!cp || !cp.id || !cp.cloudMediaUrl) return;
+                if(!cp || !cp.id) return;
                 if(cp.type==='story'){
                     if(cp.expiresAt && cp.expiresAt < Date.now()) return;
+                    if(!cp.cloudMediaUrl) return;
                     let owner = state.users.find(u=>accountId(u)===cp.userPublicId) || {id:cloudIdToLocalId(cp.userPublicId), username:cp.username, avatar:cp.avatar};
                     if(!state.stories.some(st=>String(st.id)===String(cp.id))){ state.stories.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, userId:owner.id, username:cp.username, avatar:cp.avatar, cloudMediaUrl:cp.cloudMediaUrl, mediaType:cp.mediaType||'image', duration:cp.duration||0, stickers:cp.stickers||{}, time:cp.time||'Cloud', expiresAt:cp.expiresAt, viewedBy:[], cloudOnly:true}); changed=true; if(getCurrentUser() && cp.userPublicId!==accountId(getCurrentUser())) pushLocalNotification('New story on Chatgram', (cp.username||'Someone')+' added a story'); }
                     return;
                 }
+                if(!cp.cloudMediaUrl){ const localExisting=state.posts.find(x=>String(x.id)===String(cp.id) && x.mediaKey); if(!localExisting) return; }
                 let owner = state.users.find(u=>accountId(u)===cp.userPublicId) || {id:cloudIdToLocalId(cp.userPublicId), username:cp.username, avatar:cp.avatar};
                 let p = state.posts.find(x=>String(x.id)===String(cp.id));
                 if(!p){ state.posts.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, type:cp.type||'post', userId:owner.id, username:cp.username, avatar:cp.avatar, caption:cp.caption||'', mediaType:cp.mediaType||'image', cloudMediaUrl:cp.cloudMediaUrl, duration:cp.duration||0, likedBy:[], likedByPublic:cp.likedByPublic||[], _seenLikePublic:cp.likedByPublic||[], savedBy:[], comments:cp.comments||[], time:cp.time||'Cloud', cloudOnly:true}); changed=true; if(getCurrentUser() && cp.userPublicId!==accountId(getCurrentUser())) pushLocalNotification('New '+(cp.type==='reel'?'reel':'post')+' on Chatgram', (cp.username||'Someone')+' uploaded '+(cp.type==='reel'?'a reel':'a post')); }
@@ -2615,8 +2625,9 @@
         function mergeCloudMessages(userId, cloudMsgs){
             const msgs=getThreadWith(userId); let changed=false;
             cloudMsgs.forEach(m=>{
-                const existing=msgs.find(x=>x.cloudMsgId===m.id); if(existing){ existing.deletedEveryone=!!m.deletedEveryone; existing.deletedForPublic=m.deletedForPublic||existing.deletedForPublic||[]; return; }
                 const sender=state.users.find(u=>accountId(u)===m.senderPublicId); const receiver=state.users.find(u=>accountId(u)===m.receiverPublicId);
+                const existing=msgs.find(x=>x.cloudMsgId===m.id || (x.senderId===(sender?.id||userId) && Math.abs((x.createdAt||0)-(m.createdAtClient||0))<2500 && (x.text||'')===(m.text||'')));
+                if(existing){ existing.cloudMsgId=m.id; existing.deletedEveryone=!!m.deletedEveryone; existing.deletedForPublic=m.deletedForPublic||existing.deletedForPublic||[]; if(m.media) existing.media=m.media; if(m.mediaType) existing.mediaType=m.mediaType; changed=true; return; }
                 msgs.push({id:Date.now()+Math.random(), cloudMsgId:m.id, text:m.text||'', media:m.media||'', mediaType:m.mediaType||'', senderId:sender?.id||userId, receiverId:receiver?.id||getCurrentUser()?.id, createdAt:m.createdAtClient||Date.now(), readBy:[], deletedEveryone:!!m.deletedEveryone, deletedForPublic:m.deletedForPublic||[]}); changed=true;
             });
             if(changed){ msgs.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); saveState(); if(state.currentPage==='messages' && state.activeChat===Number(userId)) openChat(userId); else updateBadges(); }
@@ -2892,6 +2903,13 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if (notifBadge) { notifBadge.style.display = unreadNotifs ? 'flex' : 'none'; notifBadge.textContent = unreadNotifs; }
         }
 
+
+        function cleanupBrokenCloudMediaPosts(){
+            const before = state.posts.length;
+            state.posts = state.posts.filter(p => !(p.cloudOnly && !p.cloudMediaUrl && !p.mediaKey && !p.media && !p.image));
+            if(before !== state.posts.length) saveState();
+        }
+
         // ============ FEED / STORIES ============
         function renderFeed() { renderStories(); renderFeedPosts(); renderCurrentUserCard(); renderSuggestions(); }
         function visibleFeedPosts() {
@@ -2916,6 +2934,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 loadMediaBlobUrl(item.mediaKey).then(() => navigateTo(state.currentPage || 'feed'));
                 return `<div class="empty-state" style="margin:0;min-height:220px;display:flex;align-items:center;justify-content:center">Loading media...</div>`;
             }
+            if(!src) return `<div class="empty-state" style="margin:0;height:100%;min-height:220px;display:flex;align-items:center;justify-content:center"><div><h3>Media unavailable</h3><p>Cloud media was not uploaded. Please upload again after cloud media setup.</p></div></div>`;
             return item.mediaType === 'video' ? `<video class="${cls}" src="${src}" controls playsinline preload="metadata"></video>${item.duration ? `<span class="media-duration">${formatDuration(item.duration)}</span>` : ''}` : `<img class="${cls}" src="${src}" alt="" loading="lazy">`;
         }
         function renderReelMedia(item) {
@@ -2924,11 +2943,13 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 loadMediaBlobUrl(item.mediaKey).then(()=>renderReels());
                 return `<div class="empty-state" style="height:100%;display:flex;align-items:center;justify-content:center">Loading reel...</div>`;
             }
+            if(!src) return `<div class="reel-video" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0095f6,#bc1888,#f09433);color:white;text-align:center;padding:24px"><div><h2>Media unavailable</h2><p>Cloud media was not uploaded. Please upload again after cloud media setup.</p></div></div>`;
             return item.mediaType === 'video'
                 ? `<video class="reel-video" data-reel-id="${item.id}" src="${src}" playsinline loop preload="metadata"></video>${item.duration ? `<span class="media-duration">${formatDuration(item.duration)}</span>` : ''}`
                 : `<img class="reel-video" src="${src}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"1280\"><defs><linearGradient id=\"g\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop stop-color=\"#0095f6\"/><stop offset=\".55\" stop-color=\"#bc1888\"/><stop offset=\"1\" stop-color=\"#f09433\"/></linearGradient></defs><rect width=\"720\" height=\"1280\" fill=\"url(#g)\"/><text x=\"50%\" y=\"48%\" text-anchor=\"middle\" fill=\"white\" font-family=\"Arial\" font-size=\"54\" font-weight=\"700\">Media unavailable</text><text x=\"50%\" y=\"54%\" text-anchor=\"middle\" fill=\"white\" opacity=\".85\" font-family=\"Arial\" font-size=\"28\">Upload again or set cloud media</text></svg>')">`;
         }
         function renderFeedPosts() {
+            cleanupBrokenCloudMediaPosts();
             const container = document.getElementById('feedPosts'); const posts = visibleFeedPosts();
             if (!posts.length) { container.innerHTML = `<div class="empty-state"><h3>No posts yet</h3><p>Pre-loaded posts removed. Upload your first post, or search and follow real accounts.</p><button class="mini-btn" onclick="openCreateModal('post')">Create post</button></div>`; return; }
             container.innerHTML = posts.map(post => {
@@ -2961,6 +2982,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
 
         // ============ REELS ============
         function renderReels() {
+            cleanupBrokenCloudMediaPosts();
             const box = document.getElementById('reelsContainer');
             const reels = state.posts.filter(p=>p.type==='reel').sort((a,b)=>b.id-a.id);
             if (!reels.length) { box.innerHTML = `<div class="empty-state"><h3>No reels yet</h3><p>Upload a reel and it will show in this premium Instagram-style Reels UI.</p><button class="mini-btn" onclick="openCreateModal('reel')">Upload reel</button></div>`; return; }
@@ -3356,7 +3378,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 wrap.onclick=e=>{if(e.target===wrap){wrap.remove();resolve(false);}};
             });
         }
-        async function postOptions(postId){ const p=state.posts.find(x=>x.id===postId); if(!p)return; if(p.userId===getCurrentUser().id && await confirmRemovePremium(p.type||'post')){ await deleteMediaBlob(p.mediaKey); state.posts=state.posts.filter(x=>x.id!==postId); saveState(); navigateTo(state.currentPage); } else if(p.userId!==getCurrentUser().id) alert('Post options: Report / Copy link / Share'); }
+        async function postOptions(postId){ const p=state.posts.find(x=>x.id===postId); if(!p)return; if(p.userId===getCurrentUser().id && await confirmRemovePremium(p.type||'post')){ await deleteMediaBlob(p.mediaKey); try{ if(window.chatgramCloudDeletePost) await window.chatgramCloudDeletePost(p.cloudId||p.id); }catch(e){ console.warn('Cloud delete failed', e); } state.posts=state.posts.filter(x=>x.id!==postId); saveState(); navigateTo(state.currentPage); } else if(p.userId!==getCurrentUser().id) alert('Post options: Report / Copy link / Share'); }
 
         // ============ STORIES VIEWER ============
         let storyTimer=null, storyProgress=0;
