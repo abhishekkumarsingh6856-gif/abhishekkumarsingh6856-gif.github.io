@@ -1882,6 +1882,15 @@
         .ai-fab { touch-action:none; user-select:none; }
         .ai-fab.dragging { opacity:.82; transform:scale(1.08)!important; }
         .ai-position-hint { position:fixed; z-index:10002; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.82); color:#fff; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:9px 13px; font-size:12px; font-weight:800; display:none; pointer-events:none; backdrop-filter:blur(12px); }
+
+
+        /* ============ TIME + MESSAGE WRAP FIXES ============ */
+        .chat-text { overflow-wrap:anywhere!important; word-break:break-word!important; max-width:100%; }
+        .chat-bubble { max-width:min(78%,560px)!important; overflow:visible; }
+        .chat-input { min-width:0; }
+        .story-upload-time { display:block; color:var(--text-muted); font-size:10px; margin-top:2px; max-width:74px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .post-upload-time { color:var(--text-muted); font-size:12px; margin-top:2px; font-weight:600; }
+        .reel-upload-time { color:rgba(255,255,255,.82); font-size:12px; margin-top:6px; text-shadow:0 2px 8px rgba(0,0,0,.6); }
     </style>
 </head>
 <body>
@@ -2514,6 +2523,12 @@
         function formatNumber(num) { num = Number(num)||0; if (num>=1000000) return (num/1000000).toFixed(1)+'M'; if (num>=1000) return (num/1000).toFixed(1)+'K'; return String(num); }
         function formatDuration(sec) { sec = Math.max(0, Math.floor(Number(sec)||0)); const m = Math.floor(sec/60), s = sec%60; return m + ':' + String(s).padStart(2,'0'); }
         function timeNow() { return 'Just now'; }
+        function timeAgo(ts){
+            const t=Number(ts)||Date.now(); const diff=Math.max(0, Date.now()-t);
+            const s=Math.floor(diff/1000), m=Math.floor(s/60), h=Math.floor(m/60), d=Math.floor(h/24);
+            if(s<10) return 'Just now'; if(s<60) return s+'s ago'; if(m<60) return m+'m ago'; if(h<24) return h+'h ago'; if(d<7) return d+'d ago';
+            return new Date(t).toLocaleDateString();
+        }
         function formatMsgTime(ts){ const d=new Date(ts||Date.now()); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
         function formatMsgDay(ts){ const d=new Date(ts||Date.now()), today=new Date(); return d.toDateString()===today.toDateString()?'Today':d.toLocaleDateString(); }
         function threadKey(a,b){ return [Number(a),Number(b)].sort((x,y)=>x-y).join('_'); }
@@ -2600,7 +2615,7 @@
             return { id:String(st.id), type:'story', userPublicId:accountId(u), username:u.username||st.username, avatar:u.avatar||st.avatar, mediaType:st.mediaType||'image', cloudMediaUrl:st.cloudMediaUrl||'', duration:st.duration||0, stickers:st.stickers||{}, createdAt:st.id||Date.now(), expiresAt:(st.id||Date.now()) + 24*60*60*1000, time:st.time||timeNow() };
         }
         async function syncStoryToCloud(st){ if(!st || !state.cloudSyncEnabled) return; await waitForFirebaseCloud(6000); try { if(window.chatgramCloudUpsertPost) await window.chatgramCloudUpsertPost(storyPublicData(st)); } catch(e){ console.warn('Cloud story sync failed', e); } }
-        function cleanupExpiredStories(){ const now=Date.now(); const before=state.stories.length; state.stories=state.stories.filter(st => !st.expiresAt || st.expiresAt>now); if(before!==state.stories.length) saveState(); }
+        function cleanupExpiredStories(){ const now=Date.now(); const before=state.stories.length; state.stories.forEach(st=>{ if(!st.expiresAt) st.expiresAt=(Number(st.id)||now)+24*60*60*1000; }); state.stories=state.stories.filter(st => st.expiresAt>now); if(before!==state.stories.length) saveState(); }
         function mergeCloudPosts(list){
             if(!Array.isArray(list)) return; let changed=false;
             list.forEach(cp=>{
@@ -2936,9 +2951,14 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const me = getCurrentUser(); const container = document.getElementById('storiesContainer');
             let html = `<div class="story-item" onclick="openCreateModal('story')"><div class="story-ring no-story"><img src="${me.avatar}" alt=""><div class="story-add">+</div></div><span class="story-name">Your story</span></div>`;
             const allowed = new Set([me.id, ...(me.followingIds || [])]);
-            state.stories.filter(st => allowed.has(st.userId) || state.privacy === 'public').sort((a,b)=>b.id-a.id).forEach(st => {
+            const latestByUser = new Map();
+            state.stories
+                .filter(st => (allowed.has(st.userId) || state.privacy === 'public') && (!st.expiresAt || st.expiresAt>Date.now()))
+                .sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0))
+                .forEach(st => { if(!latestByUser.has(st.userId)) latestByUser.set(st.userId, st); });
+            [...latestByUser.values()].forEach(st => {
                 const u = byId(st.userId) || {};
-                html += `<div class="story-item" onclick="openStoryViewer(${st.id})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${u.isVip?' 💎':''}</span></div>`;
+                html += `<div class="story-item" onclick="openStoryViewer(${st.id})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${u.isVip?' 💎':''}</span><span class="story-upload-time">${timeAgo(st.id)}</span></div>`;
             });
             container.innerHTML = html;
         }
@@ -2970,10 +2990,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 const user = byId(post.userId) || {username:post.username, avatar:post.avatar};
                 const comments = post.comments || [];
                 return `<article class="post-card fade-in">
-                    <div class="post-header"><img class="post-avatar" src="${user.avatar}" alt="" onclick="viewProfile(${user.id})"><div class="post-user-info"><div class="post-username" onclick="viewProfile(${user.id})">${escapeHTML(user.username)} ${vipBadge(user)}</div>${post.location ? `<div class="post-location">${escapeHTML(post.location)}</div>` : ''}</div><button class="post-more ${post.userId===getCurrentUser().id?'btn-remove-premium':''}" onclick="postOptions(${post.id})">${post.userId===getCurrentUser().id?'Remove':'•••'}</button></div>
+                    <div class="post-header"><img class="post-avatar" src="${user.avatar}" alt="" onclick="viewProfile(${user.id})"><div class="post-user-info"><div class="post-username" onclick="viewProfile(${user.id})">${escapeHTML(user.username)} ${vipBadge(user)}</div><div class="post-upload-time">${timeAgo(post.id)}</div>${post.location ? `<div class="post-location">${escapeHTML(post.location)}</div>` : ''}</div><button class="post-more ${post.userId===getCurrentUser().id?'btn-remove-premium':''}" onclick="postOptions(${post.id})">${post.userId===getCurrentUser().id?'Remove':'•••'}</button></div>
                     <div class="post-image-container" ondblclick="doubleTapLike(${post.id}, this)">${renderMedia(post)}<div class="double-tap-heart" id="heart-${post.id}">❤️</div></div>
                     <div class="post-actions"><button class="post-action-btn ${userLikedPost(post)?'liked':''}" onclick="toggleLike(${post.id}, this)"><svg viewBox="0 0 24 24" fill="${userLikedPost(post)?'var(--red)':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button><button class="post-action-btn" onclick="openCommentsModal(${post.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></button><button class="post-action-btn" onclick="shareItem(${post.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button><button class="post-action-btn post-action-right" onclick="toggleSave(${post.id}, this)"><svg viewBox="0 0 24 24" fill="${post.savedBy?.includes(getCurrentUser().id)?'var(--text-primary)':'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></button></div>
-                    <div class="post-likes">${formatNumber(postLikeCount(post))} likes</div><div class="post-caption"><strong>${escapeHTML(user.username)}</strong> ${escapeHTML(post.caption)}</div>${comments.length?`<div class="post-comments-link" onclick="openCommentsModal(${post.id})">View all ${comments.length} comments</div>`:''}<div class="post-time">${escapeHTML(post.time)}</div><div class="post-add-comment"><input id="comment-${post.id}" type="text" placeholder="Add a comment..." oninput="this.nextElementSibling.classList.toggle('active', this.value.length > 0)" onkeypress="if(event.key==='Enter')addComment(${post.id}, this)"><button class="btn-post" onclick="addComment(${post.id}, this.previousElementSibling)">Post</button></div>
+                    <div class="post-likes">${formatNumber(postLikeCount(post))} likes</div><div class="post-caption"><strong>${escapeHTML(user.username)}</strong> ${escapeHTML(post.caption)}</div>${comments.length?`<div class="post-comments-link" onclick="openCommentsModal(${post.id})">View all ${comments.length} comments</div>`:''}<div class="post-time">${timeAgo(post.id)}</div><div class="post-add-comment"><input id="comment-${post.id}" type="text" placeholder="Add a comment..." oninput="this.nextElementSibling.classList.toggle('active', this.value.length > 0)" onkeypress="if(event.key==='Enter')addComment(${post.id}, this)"><button class="btn-post" onclick="addComment(${post.id}, this.previousElementSibling)">Post</button></div>
                 </article>`;
             }).join('');
         }
@@ -3011,7 +3031,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                             <span class="reel-username" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</span>
                             ${u.id!==getCurrentUser().id?`<button class="btn-reel-follow ${following?'following':''}" onclick="event.stopPropagation();toggleFollowUser(${u.id}, this)">${following?'Following':'Follow'}</button>`:`<button class="btn-reel-follow btn-remove-premium" onclick="event.stopPropagation();postOptions(${r.id})">Remove</button>`}
                         </div>
-                        <div class="reel-caption">${escapeHTML(r.caption)}</div>
+                        <div class="reel-caption">${escapeHTML(r.caption)}</div><div class="reel-upload-time">${timeAgo(r.id)}</div>
                         <div class="reel-music">🎵 Original Audio - ${escapeHTML(u.username||'user')}</div>
                     </div>
                     <div class="reel-actions">
@@ -3438,7 +3458,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const u=byId(st.userId)||{}; const viewer=document.getElementById('storyViewer'); viewer.classList.add('active');
             document.getElementById('storyAvatar').src=u.avatar||st.avatar;
             document.getElementById('storyUsername').textContent=u.username||st.username;
-            document.getElementById('storyTime').textContent=st.mediaType==='video' && st.duration ? `${st.time} · ${formatDuration(st.duration)}` : st.time;
+            document.getElementById('storyTime').textContent=st.mediaType==='video' && st.duration ? `${timeAgo(st.id)} · ${formatDuration(st.duration)}` : timeAgo(st.id);
             const top = document.querySelector('.story-top-bar');
             let del = document.getElementById('storyDeleteBtn');
             if (st.userId===getCurrentUser().id) {
@@ -3464,7 +3484,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             };
             const mediaEl=document.getElementById('storyImage');
             if(st.mediaType==='video'){
-                mediaEl.onloadedmetadata=()=>{ st.duration = mediaEl.duration || st.duration || 5; document.getElementById('storyTime').textContent = `${st.time} · ${formatDuration(st.duration)}`; saveState(); startTimer(st.duration); };
+                mediaEl.onloadedmetadata=()=>{ st.duration = mediaEl.duration || st.duration || 5; document.getElementById('storyTime').textContent = `${timeAgo(st.id)} · ${formatDuration(st.duration)}`; saveState(); startTimer(st.duration); };
                 startTimer(st.duration || 5);
             } else startTimer(5);
             const reply=document.getElementById('storyReplyInput'); reply.value='';
@@ -3674,7 +3694,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         }
         setTimeout(setupTronixDrag, 500);
 
+        setInterval(()=>{ cleanupExpiredStories(); if(state.currentPage==='feed') renderStories(); }, 60000);
         init();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0d3544cec9f7083',t:'MTc4MTcxMjY3Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
