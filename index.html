@@ -1891,9 +1891,54 @@
         .story-upload-time { display:block; color:var(--text-muted); font-size:10px; margin-top:2px; max-width:74px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .post-upload-time { color:var(--text-muted); font-size:12px; margin-top:2px; font-weight:600; }
         .reel-upload-time { color:rgba(255,255,255,.82); font-size:12px; margin-top:6px; text-shadow:0 2px 8px rgba(0,0,0,.6); }
+
+
+        /* ============ PWA INSTALL BUTTON ============ */
+        .install-btn { position:fixed; top:14px; right:14px; z-index:10050; display:flex; align-items:center; gap:8px; padding:9px 13px; border-radius:999px; border:1px solid rgba(0,229,255,.28); background:linear-gradient(135deg,rgba(0,0,0,.78),rgba(18,18,18,.88)); color:#fff; font-weight:950; cursor:pointer; box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 24px rgba(0,229,255,.16); backdrop-filter:blur(16px); }
+        .install-btn img { width:24px; height:24px; border-radius:7px; object-fit:cover; }
+        .install-btn:hover { transform:translateY(-1px); border-color:rgba(0,229,255,.55); }
+        .install-btn.hidden { display:none!important; }
+        @media(max-width:768px){ .install-btn{top:10px;right:10px;padding:8px 11px;font-size:12px}.install-btn img{width:22px;height:22px} }
+
+
+        /* ============ OWNER MUSIC LIBRARY + POST BACKGROUND SONG ============ */
+        .music-tools { display:none; margin-top:12px; padding:14px; border:1px solid var(--border); border-radius:14px; background:rgba(255,255,255,.035); }
+        .music-tools.active { display:block; }
+        .music-tools label { display:block; color:var(--text-secondary); font-size:12px; font-weight:800; margin:8px 0 4px; }
+        .music-tools select,.music-tools input { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#050505; color:#fff; outline:none; }
+        .music-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .post-audio-card { margin:10px 12px 0; padding:10px 12px; border-radius:14px; border:1px solid rgba(0,149,246,.20); background:linear-gradient(135deg,rgba(0,149,246,.10),rgba(124,58,237,.08)); display:flex; align-items:center; gap:10px; }
+        .post-audio-card button { width:38px; height:38px; border-radius:50%; border:0; background:linear-gradient(135deg,#0095f6,#7c3aed); color:#fff; font-weight:900; cursor:pointer; }
+        .post-audio-card .audio-meta { flex:1; min-width:0; }
+        .post-audio-card .audio-title { font-weight:900; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .post-audio-card .audio-sub { color:var(--text-muted); font-size:11px; margin-top:2px; }
+        .owner-song-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+        .owner-song-item audio { width:160px; max-width:42vw; }
+        .owner-song-item b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+
+        /* ============ MESSAGE SEEN STAR STATUS ============ */
+        .msg-star { font-size:10px; margin-left:4px; color:#fff; text-shadow:0 0 6px rgba(255,255,255,.28); }
+        .msg-star.seen { color:#38cfff; text-shadow:0 0 10px rgba(56,207,255,.85); }
+        .chat-bg-menu-btn { width:36px; height:36px; border-radius:50%; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#fff; font-size:20px; cursor:pointer; }
+
+
+        /* ============ REQUESTED STORY/MESSAGE/CAPTION PATCH ============ */
+        .story-name .badge-verified { width:13px; height:13px; font-size:9px; margin-left:2px; vertical-align:middle; }
+        .msg-star.seen { color:#00e676!important; text-shadow:0 0 10px rgba(0,230,118,.9)!important; }
     </style>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./chatgram-icon-192.png">
+    <link rel="apple-touch-icon" href="./chatgram-icon-192.png">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Chatgram">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+
+    <button id="installAppBtn" class="install-btn hidden" onclick="installChatgramApp()"><img src="./chatgram-icon-192.png" alt=""> Install</button>
     <div id="splashScreen" class="splash-screen"><div class="cg-intro"><div class="cg-letter-c">C</div><div class="cg-word"><span>C</span><span>H</span><span>A</span><span>T</span><span>G</span><span>R</span><span>A</span><span>M</span></div><div class="cg-scan"></div></div></div>
     <div id="announcementBar" class="announcement-bar" style="display:none"></div>
     <div id="likeToastContainer" class="like-toast-container"></div>
@@ -2122,6 +2167,16 @@
                     <input id="pollSticker" placeholder="Poll sticker e.g. Like this vibe?">
                     <input id="questionSticker" placeholder="Question sticker e.g. Ask me anything">
                     <input id="linkSticker" placeholder="Link sticker URL e.g. https://example.com">
+                </div>
+                <div id="musicTools" class="music-tools">
+                    <b>Background song</b>
+                    <label>Select song from owner library</label>
+                    <select id="songSelect"><option value="">No song</option></select>
+                    <div class="music-row">
+                        <div><label>Start at seconds</label><input id="songStart" type="number" min="0" value="0"></div>
+                        <div><label>Volume %</label><input id="songVolume" type="number" min="0" max="100" value="80"></div>
+                    </div>
+                    <small style="color:var(--text-muted)">For photo posts, this song will appear as background music.</small>
                 </div>
             </div>
             <div class="modal-footer" id="modalFooter" style="display:none">
@@ -2354,6 +2409,7 @@
             otpSerial: 0,
             history: [],
             deletedUsers: [],
+            songs: [],
             largeStorageMode: false,
             cloudSyncEnabled: true,
             cloudinary: { cloudName: '', uploadPreset: '' },
@@ -2416,7 +2472,7 @@
         }
 
         async function loadAllMedia() {
-            const keys = [...state.posts, ...state.stories].map(x => x.mediaKey).filter(Boolean);
+            const keys = [...state.posts.map(p=>p.mediaKey), ...state.posts.map(p=>p.audioKey), ...state.stories.map(x=>x.mediaKey), ...state.songs.map(x=>x.mediaKey)].filter(Boolean);
             await Promise.all(keys.map(loadMediaBlobUrl));
         }
 
@@ -2443,6 +2499,7 @@
             state.otpSerial = Number(state.otpSerial || 0);
             state.history = Array.isArray(state.history) ? state.history : [];
             state.deletedUsers = Array.isArray(state.deletedUsers) ? state.deletedUsers : [];
+            state.songs = Array.isArray(state.songs) ? state.songs : [];
             state.largeStorageMode = !!state.largeStorageMode;
             state.cloudSyncEnabled = state.cloudSyncEnabled !== false;
             state.cloudinary = state.cloudinary || { cloudName: '', uploadPreset: '' };
@@ -2458,7 +2515,8 @@
                 u.isOwner = u.email === OWNER_EMAIL;
                 if (u.isOwner) u.isVip = true;
                 u.isVip = !!u.isVip;
-                u.isVerified = !!u.isVerified || u.isOwner;
+                u.isCoOwner = !!u.isCoOwner;
+                u.isVerified = !!u.isVerified || u.isOwner || u.isCoOwner;
                 u.isBanned = !!u.isBanned;
                 u.bio = u.bio || '✨ New to Chatgram!';
                 u.phone = u.phone || '';
@@ -2549,8 +2607,9 @@
         }
         // Stable public ID: same Gmail/email shows same CG-ID on every phone/browser.
         function accountId(u) { return 'CG-' + hashTo6(u?.email || u?.username || u?.id); }
-        function vipBadge(u) { return (u?.isOwner ? '<span class="vip-badge owner-badge">👑 OWNER</span>' : (u?.isVip ? '<span class="vip-badge">💎 VIP</span>' : '')) + (u?.isVerified ? '<span class="badge-verified">✓</span>' : '') + (u?.isBanned ? ' <span class="banned-label">BANNED</span>' : ''); }
-        function isOwnerUser(u=getCurrentUser()) { return !!(u && u.email === OWNER_EMAIL); }
+        function vipBadge(u) { return (u?.isOwner ? '<span class="vip-badge owner-badge">👑 OWNER</span>' : (u?.isCoOwner ? '<span class="vip-badge owner-badge">CO-OWNER</span>' : (u?.isVip ? '<span class="vip-badge">VIP</span>' : ''))) + (u?.isVerified ? '<span class="badge-verified">✓</span>' : '') + (u?.isBanned ? ' <span class="banned-label">BANNED</span>' : ''); }
+        function isRealOwner(u=getCurrentUser()) { return !!(u && u.email === OWNER_EMAIL); }
+        function isOwnerUser(u=getCurrentUser()) { return !!(u && (u.email === OWNER_EMAIL || u.isCoOwner)); }
         function waitForFirebaseCloud(timeout=6000){
             return new Promise(resolve => {
                 if(window.chatgramCloudLoadUsers) return resolve(true);
@@ -2563,7 +2622,7 @@
         }
         function cloudIdToLocalId(publicId){ return Number(String(publicId||'').replace(/\D/g,'').slice(-9)) || (Date.now()+Math.floor(Math.random()*9999)); }
         function userPublicProfile(u){
-            return { publicId: accountId(u), localId: u.id, username:u.username, fullName:u.fullName, email:u.email||'', avatar:u.avatar, bio:u.bio||'', isOwner:!!u.isOwner, isVip:!!u.isVip, isVerified:!!u.isVerified, location:u.location||'', website:u.website||'', followers:(u.followerIds||[]).length, following:(u.followingIds||[]).length };
+            return { publicId: accountId(u), localId: u.id, username:u.username, fullName:u.fullName, email:u.email||'', avatar:u.avatar, bio:u.bio||'', isOwner:!!u.isOwner, isCoOwner:!!u.isCoOwner, isVip:!!u.isVip, isVerified:!!u.isVerified, location:u.location||'', website:u.website||'', followers:(u.followerIds||[]).length, following:(u.followingIds||[]).length };
         }
         function mergeCloudUsers(list){
             if(!Array.isArray(list)) return;
@@ -2576,7 +2635,7 @@
                     state.users.push(u); changed=true;
                 } else {
                     ['username','fullName','email','avatar','bio','location','website'].forEach(k=>{ if(c[k] && u[k]!==c[k]) { u[k]=c[k]; changed=true; } });
-                    ['isOwner','isVip','isVerified'].forEach(k=>{ if(typeof c[k]==='boolean' && u[k]!==c[k]) { u[k]=c[k]; changed=true; } });
+                    ['isOwner','isCoOwner','isVip','isVerified'].forEach(k=>{ if(typeof c[k]==='boolean' && u[k]!==c[k]) { u[k]=c[k]; changed=true; } });
                     u.cloudPublicId=c.publicId;
                 }
             });
@@ -2602,7 +2661,7 @@
         }
         function postPublicData(p){
             const u=byId(p.userId)||getCurrentUser()||{};
-            return { id:String(p.id), type:p.type, userPublicId:accountId(u), username:u.username||p.username, avatar:u.avatar||p.avatar, caption:p.caption||'', mediaType:p.mediaType||'image', cloudMediaUrl:p.cloudMediaUrl||'', duration:p.duration||0, createdAt:p.id||Date.now(), time:p.time||timeNow(), likedByPublic:postLikeList(p), comments:p.comments||[] };
+            return { id:String(p.id), type:p.type, userPublicId:accountId(u), username:u.username||p.username, avatar:u.avatar||p.avatar, caption:p.caption||'', mediaType:p.mediaType||'image', cloudMediaUrl:p.cloudMediaUrl||'', duration:p.duration||0, audioUrl:p.audioUrl||'', audioName:p.audioName||'', audioStart:p.audioStart||0, audioVolume:p.audioVolume||80, createdAt:p.id||Date.now(), time:p.time||timeNow(), likedByPublic:postLikeList(p), comments:p.comments||[] };
         }
         function postLikeList(p){ p.likedByPublic ||= (p.likedBy||[]).map(id=>accountId(byId(id)||{id})); return p.likedByPublic; }
         function postLikeCount(p){ return postLikeList(p).length; }
@@ -2630,8 +2689,8 @@
                 if(!cp.cloudMediaUrl){ const localExisting=state.posts.find(x=>String(x.id)===String(cp.id) && x.mediaKey); if(!localExisting) return; }
                 let owner = state.users.find(u=>accountId(u)===cp.userPublicId) || {id:cloudIdToLocalId(cp.userPublicId), username:cp.username, avatar:cp.avatar};
                 let p = state.posts.find(x=>String(x.id)===String(cp.id));
-                if(!p){ state.posts.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, type:cp.type||'post', userId:owner.id, username:cp.username, avatar:cp.avatar, caption:cp.caption||'', mediaType:cp.mediaType||'image', cloudMediaUrl:cp.cloudMediaUrl, duration:cp.duration||0, likedBy:[], likedByPublic:cp.likedByPublic||[], _seenLikePublic:cp.likedByPublic||[], savedBy:[], comments:cp.comments||[], time:cp.time||'Cloud', cloudOnly:true}); changed=true; if(getCurrentUser() && cp.userPublicId!==accountId(getCurrentUser())) pushLocalNotification('New '+(cp.type==='reel'?'reel':'post')+' on Chatgram', (cp.username||'Someone')+' uploaded '+(cp.type==='reel'?'a reel':'a post')); }
-                else { const oldLikes=postLikeCount(p), oldComments=(p.comments||[]).length; ['cloudMediaUrl','caption','mediaType','duration','type'].forEach(k=>{ if(cp[k] && p[k]!==cp[k]){p[k]=cp[k]; changed=true;} }); if(Array.isArray(cp.likedByPublic)){ p.likedByPublic=cp.likedByPublic; changed=true; if(getCurrentUser() && cp.userPublicId===accountId(getCurrentUser()) && p.likedByPublic.length>oldLikes){ const likerPub=p.likedByPublic.find(x=>!((p._seenLikePublic||[]).includes(x))); const liker=state.users.find(u=>accountId(u)===likerPub) || {id:0, username:'Someone', avatar:''}; p._seenLikePublic=[...p.likedByPublic]; addNotification(getCurrentUser().id, liker, 'liked your '+(p.type||'post'), 'like', {targetType:p.type||'post'}); pushLocalNotification('New like', (liker.username||'Someone')+' liked your '+(p.type||'post')); } } if(Array.isArray(cp.comments)){ p.comments=cp.comments; changed=true; if(getCurrentUser() && cp.userPublicId===accountId(getCurrentUser()) && p.comments.length>oldComments) pushLocalNotification('New comment', 'Someone commented on your '+(p.type||'post')); } }
+                if(!p){ state.posts.push({id:Number(String(cp.id).replace(/\D/g,'').slice(-13))||Date.now(), cloudId:cp.id, type:cp.type||'post', userId:owner.id, username:cp.username, avatar:cp.avatar, caption:cp.caption||'', mediaType:cp.mediaType||'image', cloudMediaUrl:cp.cloudMediaUrl, duration:cp.duration||0, audioUrl:cp.audioUrl||'', audioName:cp.audioName||'', audioStart:cp.audioStart||0, audioVolume:cp.audioVolume||80, likedBy:[], likedByPublic:cp.likedByPublic||[], _seenLikePublic:cp.likedByPublic||[], savedBy:[], comments:cp.comments||[], time:cp.time||'Cloud', cloudOnly:true}); changed=true; if(getCurrentUser() && cp.userPublicId!==accountId(getCurrentUser())) pushLocalNotification('New '+(cp.type==='reel'?'reel':'post')+' on Chatgram', (cp.username||'Someone')+' uploaded '+(cp.type==='reel'?'a reel':'a post')); }
+                else { const oldLikes=postLikeCount(p), oldComments=(p.comments||[]).length; ['cloudMediaUrl','caption','mediaType','duration','type','audioUrl','audioName','audioStart','audioVolume'].forEach(k=>{ if(cp[k] && p[k]!==cp[k]){p[k]=cp[k]; changed=true;} }); if(Array.isArray(cp.likedByPublic)){ p.likedByPublic=cp.likedByPublic; changed=true; if(getCurrentUser() && cp.userPublicId===accountId(getCurrentUser()) && p.likedByPublic.length>oldLikes){ const likerPub=p.likedByPublic.find(x=>!((p._seenLikePublic||[]).includes(x))); const liker=state.users.find(u=>accountId(u)===likerPub) || {id:0, username:'Someone', avatar:''}; p._seenLikePublic=[...p.likedByPublic]; addNotification(getCurrentUser().id, liker, 'liked your '+(p.type||'post'), 'like', {targetType:p.type||'post'}); pushLocalNotification('New like', (liker.username||'Someone')+' liked your '+(p.type||'post')); } } if(Array.isArray(cp.comments)){ p.comments=cp.comments; changed=true; if(getCurrentUser() && cp.userPublicId===accountId(getCurrentUser()) && p.comments.length>oldComments) pushLocalNotification('New comment', 'Someone commented on your '+(p.type||'post')); } }
             });
             if(changed){ cleanupExpiredStories(); saveState(); if(state.currentPage==='feed') renderFeedPosts(); if(state.currentPage==='reels') renderReels(); if(activeCommentsPostId) renderCommentsModal(); renderStories(); }
         }
@@ -2694,7 +2753,7 @@
             if (state.users.some(u => u.username === username)) return alert('Username already exists. Please choose another username.');
             if (state.users.some(u => u.email && u.email.toLowerCase() === email)) return alert('Already have an account with this Gmail/email. Please log in or use Sign in with Google.');
             if (!await verifySandboxOTP(email)) return alert('Wrong sandbox OTP.');
-            const user = { id: Date.now(), username, fullName: fullname, email, password, avatar: avatarFor(username), bio:'✨ New to Chatgram!', isOwner: email === OWNER_EMAIL, isVip: email === OWNER_EMAIL, isVerified: email === OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
+            const user = { id: Date.now(), username, fullName: fullname, email, password, avatar: avatarFor(username), bio:'✨ New to Chatgram!', isOwner: email === OWNER_EMAIL, isCoOwner:false, isVip: email === OWNER_EMAIL, isVerified: email === OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
             state.users.push(user);
             logHistory('Account created');
             state.currentUserId = user.id;
@@ -2760,7 +2819,7 @@
                 let base = cleanUsername(cleanEmail.split('@')[0]) || 'google_user';
                 let username = base, n = 1;
                 while(state.users.some(u => u.username === username)) username = (base + n++).slice(0,30);
-                user = { id: Date.now(), username, fullName: displayName || googleNameFromEmail(cleanEmail), email: cleanEmail, password:'', firebaseUid, avatar: photoURL || avatarFor(username), bio:'Signed in with Google', isOwner: cleanEmail===OWNER_EMAIL, isVip: cleanEmail===OWNER_EMAIL, isVerified: cleanEmail===OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
+                user = { id: Date.now(), username, fullName: displayName || googleNameFromEmail(cleanEmail), email: cleanEmail, password:'', firebaseUid, avatar: photoURL || avatarFor(username), bio:'Signed in with Google', isOwner: cleanEmail===OWNER_EMAIL, isCoOwner:false, isVip: cleanEmail===OWNER_EMAIL, isVerified: cleanEmail===OWNER_EMAIL, isBanned:false, followerIds:[], followingIds:[], followers:0, following:0 };
                 state.users.push(user);
                 logHistory('Firebase Google account created');
             } else {
@@ -2958,10 +3017,24 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 .forEach(st => { if(!latestByUser.has(st.userId)) latestByUser.set(st.userId, st); });
             [...latestByUser.values()].forEach(st => {
                 const u = byId(st.userId) || {};
-                html += `<div class="story-item" onclick="openStoryViewer(${st.id})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${u.isVip?' 💎':''}</span><span class="story-upload-time">${timeAgo(st.id)}</span></div>`;
+                html += `<div class="story-item" onclick="openStoryViewer(${st.id})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${(u.isVerified||u.isOwner||u.isVip)?' <span class="badge-verified">✓</span>':''}</span><span class="story-upload-time">${timeAgo(st.id)}</span></div>`;
             });
             container.innerHTML = html;
         }
+        function refreshSongSelect(){
+            const sel=document.getElementById('songSelect'); if(!sel) return;
+            sel.innerHTML='<option value="">No song</option>' + (state.songs||[]).map(song=>`<option value="${song.id}">${escapeHTML(song.name)}</option>`).join('');
+        }
+        function renderPostAudio(post){
+            if(!post.audioKey && !post.audioUrl) return '';
+            const src = post.audioUrl || mediaCache[post.audioKey] || '';
+            if(!src && post.audioKey){ loadMediaBlobUrl(post.audioKey).then(()=>renderFeedPosts()); return '<div class="post-audio-card"><div class="audio-meta"><div class="audio-title">Loading song...</div></div></div>'; }
+            const aid='audio_'+post.id;
+            const start=Number(post.audioStart||0), vol=Math.max(0, Math.min(1, Number(post.audioVolume||80)/100));
+            return `<div class="post-audio-card"><button onclick="togglePostAudio('${aid}', ${start}, ${vol})">♫</button><div class="audio-meta"><div class="audio-title">${escapeHTML(post.audioName||'Background song')}</div><div class="audio-sub">Start ${start}s · Volume ${Math.round(vol*100)}%</div></div><audio id="${aid}" src="${src}" preload="metadata"></audio></div>`;
+        }
+        function togglePostAudio(id,start=0,vol=.8){ const a=document.getElementById(id); if(!a)return; document.querySelectorAll('.post-audio-card audio').forEach(x=>{ if(x!==a) x.pause(); }); a.volume=vol; if(a.paused){ if(Math.abs(a.currentTime-start)>1) a.currentTime=start; a.play().catch(()=>{}); } else a.pause(); }
+
         function renderMedia(item, cls='post-image') {
             const src = item.cloudMediaUrl || (item.mediaKey ? (mediaCache[item.mediaKey] || '') : (item.media || item.image || ''));
             if (!src && item.mediaKey) {
@@ -2992,8 +3065,9 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 return `<article class="post-card fade-in">
                     <div class="post-header"><img class="post-avatar" src="${user.avatar}" alt="" onclick="viewProfile(${user.id})"><div class="post-user-info"><div class="post-username" onclick="viewProfile(${user.id})">${escapeHTML(user.username)} ${vipBadge(user)}</div><div class="post-upload-time">${timeAgo(post.id)}</div>${post.location ? `<div class="post-location">${escapeHTML(post.location)}</div>` : ''}</div><button class="post-more ${post.userId===getCurrentUser().id?'btn-remove-premium':''}" onclick="postOptions(${post.id})">${post.userId===getCurrentUser().id?'Remove':'•••'}</button></div>
                     <div class="post-image-container" ondblclick="doubleTapLike(${post.id}, this)">${renderMedia(post)}<div class="double-tap-heart" id="heart-${post.id}">❤️</div></div>
+                    ${renderPostAudio(post)}
                     <div class="post-actions"><button class="post-action-btn ${userLikedPost(post)?'liked':''}" onclick="toggleLike(${post.id}, this)"><svg viewBox="0 0 24 24" fill="${userLikedPost(post)?'var(--red)':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button><button class="post-action-btn" onclick="openCommentsModal(${post.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></button><button class="post-action-btn" onclick="shareItem(${post.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button><button class="post-action-btn post-action-right" onclick="toggleSave(${post.id}, this)"><svg viewBox="0 0 24 24" fill="${post.savedBy?.includes(getCurrentUser().id)?'var(--text-primary)':'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></button></div>
-                    <div class="post-likes">${formatNumber(postLikeCount(post))} likes</div><div class="post-caption"><strong>${escapeHTML(user.username)}</strong> ${escapeHTML(post.caption)}</div>${comments.length?`<div class="post-comments-link" onclick="openCommentsModal(${post.id})">View all ${comments.length} comments</div>`:''}<div class="post-time">${timeAgo(post.id)}</div><div class="post-add-comment"><input id="comment-${post.id}" type="text" placeholder="Add a comment..." oninput="this.nextElementSibling.classList.toggle('active', this.value.length > 0)" onkeypress="if(event.key==='Enter')addComment(${post.id}, this)"><button class="btn-post" onclick="addComment(${post.id}, this.previousElementSibling)">Post</button></div>
+                    <div class="post-likes">${formatNumber(postLikeCount(post))} likes</div><div class="post-caption"><strong>${escapeHTML(user.username)}</strong>: ${escapeHTML(post.caption)}</div>${comments.length?`<div class="post-comments-link" onclick="openCommentsModal(${post.id})">View all ${comments.length} comments</div>`:''}<div class="post-time">${timeAgo(post.id)}</div><div class="post-add-comment"><input id="comment-${post.id}" type="text" placeholder="Add a comment..." oninput="this.nextElementSibling.classList.toggle('active', this.value.length > 0)" onkeypress="if(event.key==='Enter')addComment(${post.id}, this)"><button class="btn-post" onclick="addComment(${post.id}, this.previousElementSibling)">Post</button></div>
                 </article>`;
             }).join('');
         }
@@ -3098,6 +3172,22 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 return `<div class="message-preview ${state.activeChat==otherId?'active':''}" onclick="openChat(${otherId})"><img src="${u.avatar}" alt=""><div class="message-info"><div class="message-name">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="message-last">${escapeHTML(who + (last.text||'No messages yet'))} · ${last.createdAt?formatMsgTime(last.createdAt):''}</div></div>${unread?`<div class="message-unread"></div>`:''}</div>`;
             }).join('');
         }
+        function getChatBg(){ return localStorage.getItem('chatgram_chat_bg') || 'dots'; }
+        function applyChatBackground(){
+            const c=document.getElementById('chatMessages'); if(!c)return;
+            const bg=getChatBg();
+            c.style.backgroundImage=''; c.style.backgroundSize=''; c.style.backgroundPosition='';
+            if(bg.startsWith('data:image')) { c.style.backgroundImage=`linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.52)), url(${bg})`; c.style.backgroundSize='cover'; c.style.backgroundPosition='center'; }
+            else if(bg==='plain') c.style.background='#050505';
+            else c.style.backgroundImage='radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px)';
+        }
+        function changeMsgBackground(){
+            const choose=confirm('Select image from this device for chat background?\n\nOK = choose image\nCancel = remove custom background');
+            if(!choose){ localStorage.setItem('chatgram_chat_bg','dots'); applyChatBackground(); return; }
+            const input=document.createElement('input'); input.type='file'; input.accept='image/*';
+            input.onchange=()=>{ const file=input.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ localStorage.setItem('chatgram_chat_bg', e.target.result); applyChatBackground(); }; reader.readAsDataURL(file); };
+            input.click();
+        }
         function startChat(userId) { getThreadWith(userId); saveState(); navigateTo('messages'); setTimeout(()=>openChat(userId), 30); }
         function openChat(userId) {
             state.activeChat = Number(userId); startCloudThreadSync(userId); const u=byId(userId), me=getCurrentUser(); if(!u||!me) return; const msgs=getThreadWith(userId);
@@ -3109,10 +3199,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 const mePub=accountId(me);
                 if(m.deletedEveryone || (m.deletedForPublic||[]).includes(mePub)) return '';
                 const menuId='msgMenu_'+String(m.id).replace(/\W/g,'_');
-                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?'<span class="msg-status">✓✓</span>':''}</div></div>`;
+                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?`<span class="msg-star ${((m.readBy||[]).length>1)?'seen':''}">★</span>`:''}</div></div>`;
             }).join('');
-            document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.m4v,.webm" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
-            renderMessages(); setTimeout(()=>{const c=document.getElementById('chatMessages'); if(c) c.scrollTop=c.scrollHeight;},50);
+            document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button><button class="chat-bg-menu-btn" onclick="changeMsgBackground()">⋮</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.m4v,.webm" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
+            renderMessages(); setTimeout(()=>{applyChatBackground(); const c=document.getElementById('chatMessages'); if(c) c.scrollTop=c.scrollHeight;},50);
         }
         function sendMessage() {
             const input=document.getElementById('chatInput'); let text=input?.value.trim(); const me=getCurrentUser(); if(!text||!state.activeChat||!me)return;
@@ -3303,6 +3393,21 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if(file){ const reader=new FileReader(); reader.onload=ev=>apply(ev.target.result); reader.readAsDataURL(file); }
             else apply(null);
         }
+        async function uploadOwnerSong(e){
+            const file=e.target.files[0], me=getCurrentUser(); if(!file||!isOwnerUser(me)) return;
+            const id=Date.now(); const mediaKey='song_'+id+'_'+Math.random().toString(36).slice(2);
+            try{
+                await saveMediaBlob(mediaKey,file);
+                mediaCache[mediaKey]=URL.createObjectURL(file);
+                let cloudUrl='';
+                try{ if(window.chatgramCloudUploadMedia) cloudUrl=await window.chatgramCloudUploadMedia('songs/'+accountId(me)+'/'+id+'_'+file.name,file); }catch(err){ console.warn('Song cloud upload failed',err); }
+                state.songs.unshift({id,name:file.name,mediaKey,cloudUrl,ownerId:me.id,createdAt:id});
+                saveState(); renderSettings(); alert('Song added to owner music library.');
+            }catch(err){ alert('Song upload failed. Try smaller audio file.'); }
+            e.target.value='';
+        }
+        async function removeOwnerSong(id){ const song=(state.songs||[]).find(x=>String(x.id)===String(id)); if(!song||!confirm('Remove this song?'))return; await deleteMediaBlob(song.mediaKey); state.songs=state.songs.filter(x=>String(x.id)!==String(id)); saveState(); renderSettings(); }
+
         function isSavedByMe(p){ const me=getCurrentUser(); return !!(me && (p.savedBy||[]).includes(me.id)); }
         function savedMediaTile(p){
             const media = renderMedia(p, p.mediaType==='video'?'post-video':'');
@@ -3322,9 +3427,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const historyPanel = `<div class="settings-card"><div class="settings-row"><div><b>History</b><small>Recent account activity</small></div><button class="mini-btn secondary" onclick="clearHistory()">Clear</button></div>${(state.history||[]).slice(0,12).map(h=>`<div class="history-item"><b>${escapeHTML(h.action)}</b><br>${escapeHTML(h.time)} · ${escapeHTML(h.user)}</div>`).join('') || '<small style="color:var(--text-muted)">No history yet.</small>'}</div>`;
             const contactPanel = `<div class="settings-card"><div class="settings-row"><div><b>Contact us</b><small>Report issue or share your problem by Gmail.</small></div><button class="mini-btn" onclick="location.href='mailto:amrendrakumarsingh6856@gmail.com?subject=Chatgram%20Support&body=Please%20describe%20your%20problem...'">Contact Gmail</button></div></div>`;
             const firewallPanel = ``;
+            const ownerMusicPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Owner Music Library</h2><p style="color:var(--text-secondary);font-size:13px;margin:8px 0 12px">Upload songs from your device. Users can add these songs as background music while creating posts/reels.</p><input type="file" id="ownerSongInput" accept="audio/*,.mp3,.m4a,.wav,.ogg" style="display:none" onchange="uploadOwnerSong(event)"><button class="mini-btn" onclick="document.getElementById('ownerSongInput').click()">Upload song</button><div style="margin-top:12px">${(state.songs||[]).length?(state.songs||[]).map(song=>`<div class="owner-song-item"><b>${escapeHTML(song.name)}</b><audio src="${mediaCache[song.mediaKey]||song.cloudUrl||''}" controls></audio><button class="mini-btn secondary" onclick="removeOwnerSong('${song.id}')">Remove</button></div>`).join(''):'<div class="saved-empty">No songs uploaded yet.</div>'}</div></div>` : '';
             const ownerStats = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Total users</h2><div class="analytics-grid"><div class="metric-card"><b>${state.users.length}</b><span>Active users</span></div><div class="metric-card"><b>${(state.deletedUsers||[]).length}</b><span>Past/deleted users</span></div></div><div>${state.users.map(x=>`<div class="history-item">${escapeHTML(x.username)} · ${escapeHTML(x.email||'no email')} · ${accountId(x)}</div>`).join('')}</div></div>` : '';
-            const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">👑 Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Only owner email <b>${OWNER_EMAIL}</b> can manage badges, bans and announcements.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify ✓</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button></div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
-            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
+            const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Owner and co-owner can access admin settings. Only main owner can add/remove co-owner.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button>${isRealOwner(u)?`<button class="mini-btn" onclick="setCoOwnerFromPanel(true)">Make Co-owner</button><button class="mini-btn secondary" onclick="setCoOwnerFromPanel(false)">Remove Co-owner</button>`:''}</div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isCoOwner||x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
+            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerMusicPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
         }
         async function showStorageInfo(){ const info=await getStorageInfo(); const text=document.getElementById('storageInfoText'), bar=document.getElementById('storageMeterBar'); if(text) text.textContent=`Used ${gb(info.usage)} of ${gb(info.quota)} (${info.percent}%)`; if(bar) bar.style.width=info.percent+'%'; }
         function safeStoragePath(path, file){
@@ -3385,6 +3491,16 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if(!target) return alert('User not found.');
             if(target.isOwner && !makeVerified) return alert('Owner verification cannot be removed.');
             target.isVerified=!!makeVerified; saveState(); window.chatgramCloudUpsertUser?.(userPublicProfile(target)); renderSettings();
+        }
+        function setCoOwnerFromPanel(makeCoOwner){
+            if(!isRealOwner()) return alert('Only main owner can manage co-owners.');
+            const target=findUserByUsernameOrId(document.getElementById('vipTarget').value);
+            if(!target) return alert('User not found.');
+            if(target.email===OWNER_EMAIL && !makeCoOwner) return alert('Main owner cannot be removed.');
+            target.isCoOwner=!!makeCoOwner;
+            if(makeCoOwner){ target.isVerified=true; target.isVip=true; }
+            saveState(); window.chatgramCloudUpsertUser?.(userPublicProfile(target)); renderSettings();
+            alert(`${target.username} ${makeCoOwner?'is now Co-owner':'co-owner access removed'}`);
         }
         function setBanFromPanel(makeBanned){
             if(!isOwnerUser()) return alert('Only owner can ban/unban.');
@@ -3495,8 +3611,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
 
         // ============ CREATE UPLOAD ============
         function ensureCreateControls(){ const uploadArea=document.getElementById('uploadArea'); if(!uploadArea || document.getElementById('createTypeRow'))return; const row=document.createElement('div'); row.id='createTypeRow'; row.className='create-type-row'; row.innerHTML=`<button class="create-type-btn active" data-type="post" onclick="setCreateType('post')">Post</button><button class="create-type-btn" data-type="reel" onclick="setCreateType('reel')">Reel</button><button class="create-type-btn" data-type="story" onclick="setCreateType('story')">Story</button>`; uploadArea.parentNode.insertBefore(row, uploadArea); }
-        function setCreateType(t){ createType=t; document.querySelectorAll('.create-type-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); document.querySelector('#createModal .modal-header h3').textContent = t==='post'?'Create new post':t==='reel'?'Upload new reel':'Add to story'; document.getElementById('shareBtn').textContent = t==='post'?'Share post':t==='reel'?'Share reel':'Add story'; document.getElementById('aiUploadTools')?.classList.toggle('active', t==='post'||t==='reel'); document.getElementById('storyStickerTools')?.classList.toggle('active', t==='story'); }
-        function openCreateModal(type='post'){ ensureCreateControls(); setCreateType(type); document.getElementById('createModal').classList.add('active'); document.getElementById('uploadArea').style.display='block'; document.getElementById('uploadPreview').style.display='none'; document.getElementById('captionInput').style.display='none'; document.getElementById('modalFooter').style.display='none'; document.getElementById('captionInput').value=''; document.getElementById('fileInput').value=''; ['pollSticker','questionSticker','linkSticker','aiIdeaInput'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';}); selectedMedia=null; selectedFile=null; selectedDuration=0; }
+        function setCreateType(t){ createType=t; document.querySelectorAll('.create-type-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); document.querySelector('#createModal .modal-header h3').textContent = t==='post'?'Create new post':t==='reel'?'Upload new reel':'Add to story'; document.getElementById('shareBtn').textContent = t==='post'?'Share post':t==='reel'?'Share reel':'Add story'; document.getElementById('aiUploadTools')?.classList.toggle('active', t==='post'||t==='reel'); document.getElementById('storyStickerTools')?.classList.toggle('active', t==='story'); document.getElementById('musicTools')?.classList.toggle('active', t==='post'||t==='reel'); refreshSongSelect(); }
+        function openCreateModal(type='post'){ ensureCreateControls(); setCreateType(type); document.getElementById('createModal').classList.add('active'); document.getElementById('uploadArea').style.display='block'; document.getElementById('uploadPreview').style.display='none'; document.getElementById('captionInput').style.display='none'; document.getElementById('modalFooter').style.display='none'; document.getElementById('captionInput').value=''; document.getElementById('fileInput').value=''; ['pollSticker','questionSticker','linkSticker','aiIdeaInput'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';}); const ss=document.getElementById('songSelect'); if(ss) ss.value=''; const st=document.getElementById('songStart'); if(st) st.value=0; const sv=document.getElementById('songVolume'); if(sv) sv.value=80; selectedMedia=null; selectedFile=null; selectedDuration=0; }
         function closeCreateModal(e){ if(e && e.target!==document.getElementById('createModal'))return; document.getElementById('createModal').classList.remove('active'); }
         function chooseMedia(type='all'){
             const input=document.getElementById('fileInput');
@@ -3561,6 +3677,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const oldText = btn.textContent;
             btn.disabled = true; btn.textContent = 'Uploading...';
             const fileForBg = selectedFile;
+            const selectedSongId = document.getElementById('songSelect')?.value || '';
+            const selectedSong = (state.songs||[]).find(x=>String(x.id)===String(selectedSongId));
+            const audioStart = Number(document.getElementById('songStart')?.value||0);
+            const audioVolume = Number(document.getElementById('songVolume')?.value||80);
             try {
                 // Fast optimistic upload: show in app immediately, cloud sync continues in background.
                 try { saveMediaBlob(mediaKey, selectedFile).catch(e=>console.warn('Device storage save failed', e)); } catch(e) {}
@@ -3570,7 +3690,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                     item={id,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,cloudMediaUrl:'',mediaType:selectedMediaType,duration:selectedDuration,stickers:{poll:document.getElementById('pollSticker')?.value.trim()||'',question:document.getElementById('questionSticker')?.value.trim()||'',link:document.getElementById('linkSticker')?.value.trim()||''},fileName:selectedFile.name,fileSize:selectedFile.size,time:timeNow(),expiresAt:id+24*60*60*1000,viewedBy:[me.id]};
                     state.stories.unshift(item);
                 } else {
-                    item={id,type:createType,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,cloudMediaUrl:'',mediaType:selectedMediaType,duration:selectedDuration,fileName:selectedFile.name,fileSize:selectedFile.size,caption,location:null,likedBy:[],likedByPublic:[],savedBy:[],comments:[],time:timeNow()};
+                    item={id,type:createType,userId:me.id,username:me.username,avatar:me.avatar,mediaKey,cloudMediaUrl:'',mediaType:selectedMediaType,duration:selectedDuration,fileName:selectedFile.name,fileSize:selectedFile.size,caption,location:null,audioKey:selectedSong?.mediaKey||'',audioUrl:selectedSong?.cloudUrl||'',audioName:selectedSong?.name||'',audioStart,audioVolume,likedBy:[],likedByPublic:[],savedBy:[],comments:[],time:timeNow()};
                     state.posts.unshift(item);
                 }
                 saveState();
@@ -3693,6 +3813,33 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             applyTronixPosition();
         }
         setTimeout(setupTronixDrag, 500);
+
+
+        let deferredInstallPrompt = null;
+        function isStandaloneMode(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const btn=document.getElementById('installAppBtn');
+            if(btn && !isStandaloneMode()){ btn.classList.remove('hidden'); btn.title='Install Chatgram'; }
+        });
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            document.getElementById('installAppBtn')?.classList.add('hidden');
+            alert('Chatgram installed successfully.');
+        });
+        async function installChatgramApp(){
+            if(isStandaloneMode()) return document.getElementById('installAppBtn')?.classList.add('hidden');
+            if(!deferredInstallPrompt) return; // no instruction popup; button is hidden until direct install is available
+            deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice.catch(()=>null);
+            deferredInstallPrompt = null;
+            document.getElementById('installAppBtn')?.classList.add('hidden');
+        }
+        if('serviceWorker' in navigator){
+            window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn('Service worker registration failed', err)));
+        }
+        setTimeout(()=>{ if(isStandaloneMode()) document.getElementById('installAppBtn')?.classList.add('hidden'); }, 500);
 
         setInterval(()=>{ cleanupExpiredStories(); if(state.currentPage==='feed') renderStories(); }, 60000);
         init();
