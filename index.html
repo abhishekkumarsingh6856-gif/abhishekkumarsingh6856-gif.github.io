@@ -1955,6 +1955,148 @@
             .post-card { border-left:0!important; border-right:0!important; border-radius:0!important; }
             .post-header { padding:10px 12px!important; }
         }
+
+
+        /* ============ REELS FULL-SCREEN SNAP FIX ============ */
+        #reelsPage { height:100dvh!important; overflow:hidden!important; }
+        #reelsPage .content-area { height:calc(100dvh - 64px)!important; overflow:hidden!important; padding:0!important; }
+        #reelsPage .reels-container { height:100%!important; overflow-y:auto!important; overflow-x:hidden!important; scroll-snap-type:y mandatory!important; gap:0!important; -webkit-overflow-scrolling:touch; }
+        #reelsPage .reel-card { width:100%!important; max-width:430px!important; height:100%!important; min-height:100%!important; margin:0 auto!important; scroll-snap-align:start!important; scroll-snap-stop:always!important; border-radius:0!important; }
+        @media(min-width:768px){ #reelsPage .reel-card{border-radius:22px!important; height:calc(100dvh - 68px)!important; min-height:calc(100dvh - 68px)!important;} }
+        @media(max-width:480px){ #reelsPage .reel-card{height:100%!important; min-height:100%!important;} }
+
+
+        /* ============ PREMIUM GLASS BOTTOM NAV LIKE PROVIDED IMAGE ============ */
+        @media(max-width:768px){
+            .sidebar{
+                position:fixed!important;
+                left:50%!important;
+                right:auto!important;
+                bottom:10px!important;
+                top:auto!important;
+                transform:translateX(-50%)!important;
+                width:min(94vw,720px)!important;
+                height:64px!important;
+                padding:7px 10px!important;
+                border:1px solid rgba(255,255,255,.12)!important;
+                border-radius:999px!important;
+                background:linear-gradient(180deg,rgba(32,34,44,.72),rgba(6,7,12,.82))!important;
+                backdrop-filter:blur(22px) saturate(1.25)!important;
+                box-shadow:0 18px 60px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(255,255,255,.06)!important;
+                z-index:9990!important;
+                overflow:visible!important;
+            }
+            .sidebar-logo,.sidebar-footer{display:none!important;}
+            .nav-menu{
+                height:100%!important;
+                width:100%!important;
+                display:flex!important;
+                align-items:center!important;
+                justify-content:space-around!important;
+                gap:3px!important;
+                overflow:visible!important;
+                margin:0!important;
+                padding:0!important;
+            }
+            .nav-item{
+                position:relative!important;
+                width:48px!important;
+                height:48px!important;
+                min-width:48px!important;
+                padding:0!important;
+                margin:0!important;
+                border-radius:50%!important;
+                display:flex!important;
+                align-items:center!important;
+                justify-content:center!important;
+                background:transparent!important;
+                color:rgba(255,255,255,.92)!important;
+                overflow:visible!important;
+                transition:transform .24s ease, background .24s ease, box-shadow .24s ease!important;
+            }
+            .nav-item span{display:none!important;}
+            .nav-item svg{
+                width:28px!important;
+                height:28px!important;
+                stroke-width:2.35!important;
+                filter:drop-shadow(0 2px 5px rgba(0,0,0,.55));
+                z-index:2;
+            }
+            .nav-item::after{
+                content:'';
+                position:absolute;
+                left:50%;
+                bottom:-3px;
+                width:4px;
+                height:4px;
+                border-radius:50%;
+                background:rgba(255,255,255,.82);
+                transform:translateX(-50%);
+                box-shadow:0 0 8px rgba(255,255,255,.55);
+                opacity:.9;
+            }
+            .nav-item.active{
+                transform:translateY(-20px) scale(1.12)!important;
+                background:rgba(20,20,26,.96)!important;
+                box-shadow:0 16px 42px rgba(0,0,0,.65), inset 0 0 0 1px rgba(255,255,255,.10)!important;
+            }
+            .nav-item.active::before{
+                content:'';
+                position:absolute;
+                inset:-7px;
+                border-radius:50%;
+                background:conic-gradient(from 210deg,#ff7a00,#ff2d55,#bc18ff,#0095f6,#ff7a00);
+                z-index:-1;
+                filter:blur(.2px) drop-shadow(0 0 18px rgba(255,45,85,.52));
+                animation:navRingSpin 3.5s linear infinite;
+            }
+            .nav-item.active::after{
+                width:5px;height:5px;bottom:-9px;background:#ff75c8;box-shadow:0 0 10px #ff75c8;opacity:1;
+            }
+            .nav-item.active svg{transform:scale(1.05);}
+            @keyframes navRingSpin{to{transform:rotate(360deg)}}
+            .nav-badge{
+                position:absolute!important;
+                top:-4px!important;
+                right:-2px!important;
+                left:auto!important;
+                min-width:18px!important;
+                height:18px!important;
+                padding:0 5px!important;
+                border-radius:999px!important;
+                display:flex!important;
+                align-items:center!important;
+                justify-content:center!important;
+                background:#ff3040!important;
+                color:#fff!important;
+                font-size:11px!important;
+                font-weight:950!important;
+                border:2px solid #161820!important;
+                box-shadow:0 0 12px rgba(255,48,64,.65)!important;
+                z-index:4!important;
+            }
+            .main-content{margin-left:0!important;padding-bottom:88px!important;}
+            .ai-fab{bottom:92px!important;}
+            #installAppBtn{top:8px!important;right:8px!important;}
+
+            /* order similar to reference: search, reels, home, messages, likes, create/profile/settings */
+            .nav-item[data-page="explore"]{order:1;}
+            .nav-item[data-page="reels"]{order:2;}
+            .nav-item[data-page="feed"]{order:3;}
+            .nav-item[data-page="messages"]{order:4;}
+            .nav-item[data-page="notifications"]{order:5;}
+            .nav-item:not([data-page]){order:6;}
+            .nav-item[data-page="profile"]{order:7;}
+            .nav-item[data-page="settings"]{order:8;}
+        }
+
+        @media(max-width:420px){
+            .sidebar{width:calc(100vw - 18px)!important;height:62px!important;bottom:8px!important;padding:7px 8px!important;}
+            .nav-item{width:42px!important;height:42px!important;min-width:42px!important;}
+            .nav-item svg{width:25px!important;height:25px!important;}
+            .nav-item.active{transform:translateY(-18px) scale(1.10)!important;}
+            .nav-item.active::before{inset:-6px;}
+        }
     </style>
 
     <link rel="manifest" href="./manifest.json">
@@ -2809,13 +2951,11 @@
         async function publishTronixConfig(){
             if(!isOwnerUser()) return alert('Only owner/co-owner can publish Tronix API.');
             const apiKey=document.getElementById('ownerTronixApiKey')?.value.trim();
-            const endpoint=document.getElementById('ownerTronixEndpoint')?.value.trim();
-            const model=document.getElementById('ownerTronixModel')?.value.trim();
-            if(!apiKey || !endpoint || !model) return alert('API key, endpoint and model are required.');
-            const cfg={apiKey, endpoint, model, publishedBy:getCurrentUser()?.username||'owner', updatedAt:Date.now()};
+            if(!apiKey) return alert('API key is required.');
+            const cfg={apiKey, endpoint:'auto', model:'auto', publishedBy:getCurrentUser()?.username||'owner', updatedAt:Date.now()};
             state.tronixGlobal=cfg; saveState();
             await waitForFirebaseCloud(6000);
-            try { await window.chatgramCloudPublishTronixConfig?.(cfg); alert('Tronix API published for all users.'); renderSettings(); }
+            try { await window.chatgramCloudPublishTronixConfig?.(cfg); alert('Tronix API key published for all users.'); renderSettings(); }
             catch(e){ console.warn(e); alert('Could not publish to cloud. Check Firestore rules for chatgram_config_v2.'); }
         }
         function ownerDisplayName(){ const o=state.users.find(u=>u.email===OWNER_EMAIL || u.isOwner); return o?.fullName || o?.username || 'Abhishek Singh'; }
@@ -3115,7 +3255,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 .forEach(st => { if(!latestByUser.has(st.userId)) latestByUser.set(st.userId, st); });
             [...latestByUser.values()].forEach(st => {
                 const u = byId(st.userId) || {};
-                html += `<div class="story-item" onclick="openStoryViewer(${st.id})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${(u.isVerified||u.isOwner||u.isVip)?' <span class="badge-verified">✓</span>':''}</span><span class="story-upload-time">${timeAgo(st.id)}</span></div>`;
+                html += `<div class="story-item" onclick="openUserStories(${st.userId})"><div class="story-ring ${st.viewedBy?.includes(me.id) ? 'no-story' : ''}"><img src="${u.avatar || st.avatar}" alt=""></div>${st.userId===me.id ? `<button class="story-remove-btn" title="Remove story" onclick="event.stopPropagation();removeStory(${st.id})">×</button>` : ''}<span class="story-name">${escapeHTML(u.username || st.username)}${(u.isVerified||u.isOwner||u.isVip)?' <span class="badge-verified">✓</span>':''}</span><span class="story-upload-time">${timeAgo(st.id)}</span></div>`;
             });
             container.innerHTML = html;
         }
@@ -3546,7 +3686,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const contactPanel = `<div class="settings-card"><div class="settings-row"><div><b>Contact us</b><small>Report issue or share your problem by Gmail.</small></div><button class="mini-btn" onclick="location.href='mailto:amrendrakumarsingh6856@gmail.com?subject=Chatgram%20Support&body=Please%20describe%20your%20problem...'">Contact Gmail</button></div></div>`;
             const firewallPanel = ``;
             const ownerMusicPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Owner Music Library</h2><p style="color:var(--text-secondary);font-size:13px;margin:8px 0 12px">Upload songs from your device. Users can add these songs as background music while creating posts/reels.</p><input type="file" id="ownerSongInput" accept="audio/*,.mp3,.m4a,.wav,.ogg" style="display:none" onchange="uploadOwnerSong(event)"><button class="mini-btn" onclick="document.getElementById('ownerSongInput').click()">Upload song</button><div style="margin-top:12px">${(state.songs||[]).length?(state.songs||[]).map(song=>`<div class="owner-song-item"><b>${escapeHTML(song.name)}</b><audio src="${mediaCache[song.mediaKey]||song.cloudUrl||''}" controls></audio><button class="mini-btn secondary" onclick="removeOwnerSong('${song.id}')">Remove</button></div>`).join(''):'<div class="saved-empty">No songs uploaded yet.</div>'}</div></div>` : '';
-            const ownerTronixPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Publish Tronix API for all users</h2><p style="color:var(--text-secondary);font-size:13px;margin:8px 0 12px">Set API key, endpoint and model once. All users will use this Tronix API directly.</p><input id="ownerTronixApiKey" class="settings-search-box" placeholder="API key" value="${escapeHTML(state.tronixGlobal?.apiKey||'')}"><input id="ownerTronixEndpoint" class="settings-search-box" placeholder="Endpoint URL" value="${escapeHTML(state.tronixGlobal?.endpoint||'https://api.openai.com/v1/chat/completions')}"><input id="ownerTronixModel" class="settings-search-box" placeholder="Model" value="${escapeHTML(state.tronixGlobal?.model||'gpt-4o-mini')}"><button class="mini-btn" style="margin-top:10px" onclick="publishTronixConfig()">Publish API for all users</button><div class="notification-status">Current: ${state.tronixGlobal?.model?escapeHTML(state.tronixGlobal.model):'Not published'} ${state.tronixGlobal?.publishedBy?'by '+escapeHTML(state.tronixGlobal.publishedBy):''}</div></div>` : '';
+            const ownerTronixPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Publish Tronix API for all users</h2><p style="color:var(--text-secondary);font-size:13px;margin:8px 0 12px">Only paste API key. Tronix auto-detects provider where possible; URL/model not required.</p><input id="ownerTronixApiKey" class="settings-search-box" placeholder="API key" value="${escapeHTML(state.tronixGlobal?.apiKey||'')}"><button class="mini-btn" style="margin-top:10px" onclick="publishTronixConfig()">Publish API for all users</button><div class="notification-status">Current: ${state.tronixGlobal?.apiKey?'Published':'Not published'} ${state.tronixGlobal?.publishedBy?'by '+escapeHTML(state.tronixGlobal.publishedBy):''}</div></div>` : '';
             const ownerStats = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Total users</h2><div class="analytics-grid"><div class="metric-card"><b>${state.users.length}</b><span>Active users</span></div><div class="metric-card"><b>${(state.deletedUsers||[]).length}</b><span>Past/deleted users</span></div></div><div>${state.users.map(x=>`<div class="history-item">${escapeHTML(x.username)} · ${escapeHTML(x.email||'no email')} · ${accountId(x)}</div>`).join('')}</div></div>` : '';
             const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Owner and co-owner can access admin settings. Only main owner can add/remove co-owner.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button>${isRealOwner(u)?`<button class="mini-btn" onclick="setCoOwnerFromPanel(true)">Make Co-owner</button><button class="mini-btn secondary" onclick="setCoOwnerFromPanel(false)">Remove Co-owner</button>`:''}</div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isCoOwner||x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
             box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerMusicPanel}${ownerTronixPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
@@ -3679,12 +3819,31 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
 
         // ============ STORIES VIEWER ============
         let storyTimer=null, storyProgress=0;
+        let activeStoryIds = [];
+        let activeStoryPos = 0;
+        function openUserStories(userId){
+            cleanupExpiredStories();
+            activeStoryIds = state.stories
+                .filter(st => st.userId === Number(userId) && (!st.expiresAt || st.expiresAt>Date.now()))
+                .sort((a,b)=>(Number(a.id)||0)-(Number(b.id)||0))
+                .map(st=>st.id);
+            activeStoryPos = 0;
+            if(activeStoryIds.length) openStoryViewer(activeStoryIds[activeStoryPos]);
+        }
+        function nextStoryInSequence(){
+            if(activeStoryIds.length && activeStoryPos < activeStoryIds.length - 1){
+                activeStoryPos += 1;
+                openStoryViewer(activeStoryIds[activeStoryPos]);
+            } else closeStoryViewer();
+        }
         async function removeStory(storyId){
             const st = state.stories.find(x=>x.id===storyId); if(!st)return;
             if(st.userId!==getCurrentUser().id) return alert('You can remove only your own story.');
             if(!confirm('Remove this story?')) return;
             await deleteMediaBlob(st.mediaKey);
+            try{ if(window.chatgramCloudDeletePost) await window.chatgramCloudDeletePost(st.cloudId||st.id); }catch(e){ console.warn('Cloud story delete failed', e); }
             state.stories = state.stories.filter(x=>x.id!==storyId);
+            activeStoryIds = activeStoryIds.filter(id=>id!==storyId);
             saveState(); closeStoryViewer(); renderStories();
         }
         async function openStoryViewer(storyId) {
@@ -3722,7 +3881,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 clearInterval(storyTimer); storyProgress=0;
                 const totalMs = Math.max(1000, durationSeconds * 1000);
                 const stepMs = 100;
-                storyTimer=setInterval(()=>{ storyProgress += (stepMs/totalMs)*100; const f=document.getElementById('progressFill-story'); if(f)f.style.width=Math.min(100, storyProgress)+'%'; if(storyProgress>=100)closeStoryViewer(); }, stepMs);
+                storyTimer=setInterval(()=>{ storyProgress += (stepMs/totalMs)*100; const f=document.getElementById('progressFill-story'); if(f)f.style.width=Math.min(100, storyProgress)+'%'; if(storyProgress>=100)nextStoryInSequence(); }, stepMs);
             };
             const mediaEl=document.getElementById('storyImage');
             if(st.mediaType==='video'){
@@ -3733,7 +3892,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             reply.onkeypress=(e)=>{ if(e.key==='Enter' && reply.value.trim()){ startChat(st.userId); setTimeout(()=>{ document.getElementById('chatInput').value='Story reply: '+reply.value.trim(); sendMessage(); closeStoryViewer(); },50); } };
             saveState();
         }
-        function closeStoryViewer(){ clearInterval(storyTimer); const v=document.querySelector('#storyViewer video'); if(v) v.pause(); const a=document.getElementById('storyBgAudio'); if(a){a.pause(); a.remove();} document.querySelectorAll('.sticker').forEach(x=>x.remove()); document.getElementById('storyViewer').classList.remove('active'); saveState(); renderStories(); }
+        function closeStoryViewer(){ activeStoryIds=[]; activeStoryPos=0; clearInterval(storyTimer); const v=document.querySelector('#storyViewer video'); if(v) v.pause(); const a=document.getElementById('storyBgAudio'); if(a){a.pause(); a.remove();} document.querySelectorAll('.sticker').forEach(x=>x.remove()); document.getElementById('storyViewer').classList.remove('active'); saveState(); renderStories(); }
 
         // ============ CREATE UPLOAD ============
         function ensureCreateControls(){ const uploadArea=document.getElementById('uploadArea'); if(!uploadArea || document.getElementById('createTypeRow'))return; const row=document.createElement('div'); row.id='createTypeRow'; row.className='create-type-row'; row.innerHTML=`<button class="create-type-btn active" data-type="post" onclick="setCreateType('post')">Post</button><button class="create-type-btn" data-type="reel" onclick="setCreateType('reel')">Reel</button><button class="create-type-btn" data-type="story" onclick="setCreateType('story')">Story</button>`; uploadArea.parentNode.insertBefore(row, uploadArea); }
@@ -3835,16 +3994,14 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function toggleAIChat(){ document.getElementById('aiChat').classList.toggle('open'); }
         function setOpenAIKey(){
             const current = (sessionStorage.getItem('tronix_openai_key') || localStorage.getItem('tronix_openai_key')) ? 'Already set' : 'Not set';
-            const key = prompt(`Tronix API key (${current}).\nSupports OpenAI-compatible APIs (OpenAI, OpenRouter, Groq compatible endpoints, etc).\nPaste key or leave blank to clear:`);
+            const key = prompt(`Tronix API key (${current}).\n\nPaste any supported AI API key. Tronix will auto-detect provider where possible:\n- OpenAI / OpenRouter compatible keys\n- Groq keys\n- Gemini API keys\n- NVIDIA NIM keys (nvapi-) — if browser blocks it, Tronix uses frontend fallback. For best frontend NVIDIA use OpenRouter key.\n\nLeave blank to clear:`);
             if(key === null) return;
             if(key.trim()) {
-                const endpoint = prompt('API endpoint URL:', localStorage.getItem('tronix_api_url') || 'https://api.openai.com/v1/chat/completions') || 'https://api.openai.com/v1/chat/completions';
-                const model = prompt('Model name:', localStorage.getItem('tronix_model') || 'gpt-4o-mini') || 'gpt-4o-mini';
-                localStorage.setItem('tronix_api_url', endpoint.trim());
-                localStorage.setItem('tronix_model', model.trim());
+                localStorage.removeItem('tronix_api_url');
+                localStorage.removeItem('tronix_model');
                 const permanent = confirm('Save API key permanently on this device/browser?\n\nOK = permanent localStorage\nCancel = this tab only');
-                if(permanent) { localStorage.setItem('tronix_openai_key', key.trim()); sessionStorage.removeItem('tronix_openai_key'); alert('Tronix API saved permanently on this device/browser.'); }
-                else { sessionStorage.setItem('tronix_openai_key', key.trim()); alert('Tronix API set for this tab.'); }
+                if(permanent) { localStorage.setItem('tronix_openai_key', key.trim()); sessionStorage.removeItem('tronix_openai_key'); alert('Tronix API key saved. URL/model not needed.'); }
+                else { sessionStorage.setItem('tronix_openai_key', key.trim()); alert('Tronix API key set for this tab. URL/model not needed.'); }
             } else {
                 sessionStorage.removeItem('tronix_openai_key');
                 localStorage.removeItem('tronix_openai_key');
@@ -3856,6 +4013,13 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function askTronixPreset(prefix){ const input=document.getElementById('aiChatInput'); input.value=prefix; input.focus(); }
         function clearTronixChat(){ tronixMessages = [{role:'system', content:buildTronixSystemPrompt()}]; document.getElementById('aiChatBody').innerHTML='<div class="ai-msg bot">Chat cleared. Ask me anything complex.</div>'; }
         function renderTronixText(t){ return escapeHTML(t).replace(/```([\s\S]*?)```/g,'<pre style="white-space:pre-wrap;background:#05070b;border:1px solid rgba(255,255,255,.1);padding:10px;border-radius:12px;overflow:auto">$1</pre>').replace(/\n/g,'<br>'); }
+        async function tronixFrontendFallbackAnswer(text){
+            const prompt = buildTronixSystemPrompt() + '\n\nUser: ' + text + '\nAnswer clearly in user language.';
+            const url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt);
+            const res = await fetch(url, { method:'GET', headers:{ 'Accept':'text/plain' } });
+            if(!res.ok) throw new Error('Frontend fallback HTTP '+res.status);
+            return await res.text();
+        }
         async function sendAIChat(){
             const input=document.getElementById('aiChatInput'), body=document.getElementById('aiChatBody');
             const text=input.value.trim(); if(!text)return;
@@ -3870,28 +4034,57 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 tronixMessages.push({role:'assistant', content:ans});
                 if(tronixMessages.length>18) tronixMessages = [tronixMessages[0], ...tronixMessages.slice(-16)];
             } catch(err) {
-                const fallback = 'OpenAI connection failed: ' + (err.message||err) + '\n\nOffline Tronix answer:\n\n' + aiSmartReply(text);
-                wait.innerHTML = renderTronixText(fallback);
+                try {
+                    wait.textContent = 'Direct API blocked. Trying frontend fallback...';
+                    const ans = await tronixFrontendFallbackAnswer(text);
+                    wait.innerHTML = renderTronixText(ans + '\n\nNote: Your selected API was blocked by browser/CORS, so Tronix used frontend fallback.');
+                } catch(fallbackErr) {
+                    const fallback = 'Tronix API connection failed in frontend: ' + (err.message||err) + '\n\nReason: Some providers like NVIDIA may block direct browser/CORS calls. Use Gemini/Groq/OpenRouter key for frontend-only mode, or use OpenRouter for NVIDIA models.\n\nOffline Tronix answer:\n\n' + aiSmartReply(text);
+                    wait.innerHTML = renderTronixText(fallback);
+                }
             }
             body.scrollTop=body.scrollHeight;
+        }
+        function detectTronixProvider(key){
+            const k=String(key||'').trim();
+            if(k.startsWith('gsk_')) return {name:'Groq', type:'openai-compatible', endpoint:'https://api.groq.com/openai/v1/chat/completions', models:['llama-3.1-8b-instant']};
+            if(k.startsWith('sk-or-')) return {name:'OpenRouter', type:'openai-compatible', endpoint:'https://openrouter.ai/api/v1/chat/completions', models:['openai/gpt-4o-mini']};
+            if(k.toLowerCase().startsWith('nvapi')) return {name:'NVIDIA', type:'openai-compatible', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', models:['nvidia/llama-3.1-nemotron-70b-instruct','meta/llama-3.1-70b-instruct','mistralai/mixtral-8x7b-instruct-v0.1']};
+            if(k.startsWith('AIza')) return {name:'Gemini', type:'gemini', endpoint:'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', models:['gemini-1.5-flash']};
+            return {name:'OpenAI', type:'openai-compatible', endpoint:'https://api.openai.com/v1/chat/completions', models:['gpt-4o-mini']};
         }
         async function tronixAnswer(text){
             const lower=String(text||'').toLowerCase();
             if(lower.includes('who is owner') || lower.includes('owner kaun') || lower.includes('owner kon')) return 'The owner of Chatgram is Abhishek Singh.';
             if(lower.includes('who is co owner') || lower.includes('co-owner') || lower.includes('co owner') || lower.includes('coowner')) { const co=coOwnerDisplayNames(); return co.length ? ('Current co-owner: '+co.join(', ')) : 'No co-owner is currently assigned.'; }
             const key = sessionStorage.getItem('tronix_openai_key') || localStorage.getItem('tronix_openai_key') || state.tronixGlobal?.apiKey;
-            if(!key) return aiSmartReply(text) + '\n\nTip: Owner settings se Tronix API publish ho sakti hai, ya API Key button se local API set karo.';
-            const endpoint = localStorage.getItem('tronix_api_url') || state.tronixGlobal?.endpoint || 'https://api.openai.com/v1/chat/completions';
-            const model = localStorage.getItem('tronix_model') || state.tronixGlobal?.model || 'gpt-4o-mini';
+            if(!key) return aiSmartReply(text) + '\n\nTip: Owner settings se Tronix API key publish ho sakti hai, ya API Key button se local API key set karo.';
+            const provider=detectTronixProvider(key);
+            if(provider.type==='gemini'){
+                const prompt = buildTronixSystemPrompt() + '\n\nUser: ' + text;
+                const res = await fetch(provider.endpoint + '?key=' + encodeURIComponent(key), {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.45, maxOutputTokens:1800}})
+                });
+                const data=await res.json().catch(()=>({}));
+                if(!res.ok) throw new Error(data?.error?.message || ('Gemini HTTP '+res.status));
+                return data.candidates?.[0]?.content?.parts?.map(p=>p.text).join('\n').trim() || 'Tronix did not return an answer.';
+            }
             const messages = [{role:'system', content:buildTronixSystemPrompt()}, ...tronixMessages.filter(m=>m.role!=='system')];
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-                body: JSON.stringify({ model, messages, temperature: 0.45, max_tokens: 1800 })
-            });
-            const data = await res.json().catch(()=>({}));
-            if(!res.ok) throw new Error(data?.error?.message || ('API HTTP '+res.status));
-            return data.choices?.[0]?.message?.content?.trim() || 'Tronix did not return an answer.';
+            let lastError = null;
+            for (const model of (provider.models || [provider.model])) {
+                try {
+                    const res = await fetch(provider.endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept':'application/json', 'Authorization': 'Bearer ' + key },
+                        body: JSON.stringify({ model, messages, temperature: 0.45, max_tokens: 1800 })
+                    });
+                    const data = await res.json().catch(()=>({}));
+                    if(!res.ok) throw new Error(data?.error?.message || (`${provider.name||'API'} HTTP ${res.status}`));
+                    return data.choices?.[0]?.message?.content?.trim() || 'Tronix did not return an answer.';
+                } catch(e) { lastError = e; console.warn((provider.name||'API')+' model failed:', model, e); }
+            }
+            throw new Error((provider.name||'API') + ' failed: ' + (lastError?.message || lastError || 'Unknown error') + (provider.name==='NVIDIA' ? '\nIf it says Failed to fetch, NVIDIA may be blocking direct browser calls; use a backend/proxy or OpenRouter/Groq key.' : ''));
         }
 
         window.addEventListener('popstate', () => {
@@ -3967,5 +4160,5 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         setInterval(()=>{ cleanupExpiredStories(); if(state.currentPage==='feed') renderStories(); }, 60000);
         init();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0e76692990f5519',t:'MTc4MTkyMzE0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
