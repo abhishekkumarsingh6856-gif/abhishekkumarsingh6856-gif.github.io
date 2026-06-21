@@ -2097,6 +2097,87 @@
             .nav-item.active{transform:translateY(-18px) scale(1.10)!important;}
             .nav-item.active::before{inset:-6px;}
         }
+
+
+        /* ============ REELS ACTIONS LIKE REFERENCE + CHAT MEDIA VIEWER ============ */
+        .reel-actions { align-items:center!important; gap:20px!important; }
+        .reel-action { display:flex!important; flex-direction:column!important; align-items:center!important; gap:7px!important; font-weight:900!important; }
+        .reel-action svg { width:60px!important; height:60px!important; padding:14px!important; box-sizing:border-box!important; border-radius:50%!important; background:rgba(7,12,18,.62)!important; border:1px solid rgba(255,255,255,.20)!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 8px 26px rgba(0,0,0,.35)!important; backdrop-filter:blur(12px)!important; }
+        .reel-action span { font-size:14px!important; font-weight:950!important; color:#fff!important; text-shadow:0 2px 10px rgba(0,0,0,.65)!important; }
+        .reel-action:first-child svg { stroke:#ff2f5f!important; fill:#ff2f5f!important; }
+        @media(max-width:480px){ .reel-action svg{width:54px!important;height:54px!important;padding:13px!important}.reel-actions{gap:17px!important;right:9px!important} .reel-action span{font-size:13px!important} }
+        .media-viewer-overlay { position:fixed; inset:0; z-index:10020; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.92); backdrop-filter:blur(10px); padding:18px; }
+        .media-viewer-overlay.active { display:flex; }
+        .media-viewer-content { max-width:96vw; max-height:92dvh; border-radius:18px; overflow:hidden; box-shadow:0 20px 100px rgba(0,0,0,.75); }
+        .media-viewer-content img,.media-viewer-content video { display:block; max-width:96vw; max-height:92dvh; object-fit:contain; background:#000; }
+        .media-viewer-close { position:fixed; top:16px; right:18px; z-index:10021; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.10); color:#fff; font-size:30px; line-height:38px; cursor:pointer; }
+
+
+        /* ============ TOP RIGHT MESSAGE / NOTIFICATION TABS ============ */
+        .top-quick-tabs { position:fixed; top:12px; right:86px; z-index:10040; display:flex; gap:9px; }
+        .top-quick-btn { position:relative; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.14); background:linear-gradient(180deg,rgba(32,34,44,.78),rgba(6,7,12,.88)); color:#fff; display:grid; place-items:center; box-shadow:0 12px 36px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.14); backdrop-filter:blur(16px); cursor:pointer; }
+        .top-quick-btn svg { width:24px; height:24px; filter:drop-shadow(0 2px 5px rgba(0,0,0,.55)); }
+        .top-quick-btn:hover { transform:translateY(-1px); }
+        .top-quick-badge { position:absolute; top:-5px; right:-4px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#ff3040; color:white; font-size:11px; font-weight:950; border:2px solid #111; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(255,48,64,.7); }
+        @media(max-width:768px){
+            .nav-item[data-page="messages"], .nav-item[data-page="notifications"] { display:none!important; }
+            .top-quick-tabs { top:10px; right:12px; }
+            #installAppBtn:not(.hidden) { top:62px!important; right:10px!important; }
+        }
+        @media(min-width:769px){ .top-quick-tabs { display:none!important; } }
+
+
+        /* ============ HIDE APP FLOATING CONTROLS ON LOGIN ============ */
+        body:not(.app-active) #aiFab,
+        body:not(.app-active) #aiChat,
+        body:not(.app-active) #topQuickTabs,
+        body:not(.app-active) #announcementBar {
+            display:none!important;
+        }
+
+
+        /* ============ HIDE TOP QUICK TABS WHILE STORY IS OPEN ============ */
+        body.story-open #topQuickTabs { display:none!important; }
+
+
+        /* ============ FUTURISTIC GLASS MESSAGE UI LIKE REFERENCE ============ */
+        .chat-messages { padding:22px!important; gap:18px!important; background:radial-gradient(circle at 50% 0,rgba(43,120,255,.12),transparent 32%),#050914!important; }
+        .chat-bubble { position:relative!important; max-width:min(82%,560px)!important; min-width:min(240px,72vw); padding:22px 24px 18px!important; border-radius:28px!important; background:linear-gradient(145deg,rgba(18,42,88,.82),rgba(6,13,31,.92))!important; border:1px solid rgba(100,155,255,.28)!important; box-shadow:0 24px 70px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.12), 0 0 36px rgba(44,126,255,.10)!important; backdrop-filter:blur(18px) saturate(1.25)!important; overflow:visible!important; }
+        .chat-bubble.sent { align-self:flex-end!important; background:linear-gradient(145deg,rgba(16,49,105,.88),rgba(6,15,39,.94))!important; border-bottom-right-radius:10px!important; }
+        .chat-bubble.received { align-self:flex-start!important; background:linear-gradient(145deg,rgba(20,35,70,.84),rgba(7,11,28,.94))!important; border-bottom-left-radius:10px!important; }
+        .chat-bubble::after { content:''; position:absolute; left:9%; right:9%; bottom:-2px; height:2px; background:linear-gradient(90deg,transparent,#2f8cff,transparent); box-shadow:0 0 18px #2f8cff; opacity:.85; }
+        .chat-sender { color:#4b8cff!important; font-size:18px!important; font-weight:900!important; margin-bottom:18px!important; letter-spacing:.2px; }
+        .chat-text { font-size:clamp(30px,7vw,58px)!important; line-height:1.08!important; color:#f8fbff!important; font-weight:800!important; letter-spacing:.2px; margin-bottom:26px; }
+        .chat-bubble.received .chat-text { font-size:clamp(22px,5vw,40px)!important; }
+        .chat-bubble-time { display:flex!important; align-items:center!important; gap:18px!important; justify-content:flex-start!important; color:#b9c8e8!important; font-size:clamp(18px,4vw,28px)!important; font-weight:700!important; letter-spacing:.5px; margin-top:18px!important; }
+        .chat-bubble-time::after { content:''; width:1px; height:34px; background:rgba(120,160,255,.22); margin-left:16px; }
+        .msg-star { position:absolute; right:32px; bottom:28px; width:58px; height:58px; border-radius:50%; display:grid; place-items:center; border:1px solid rgba(100,155,255,.22); background:rgba(22,42,82,.72); color:#fff!important; font-size:32px!important; box-shadow:0 12px 35px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06); }
+        .msg-star.seen { color:#3aa0ff!important; text-shadow:0 0 18px rgba(58,160,255,.95)!important; }
+        .msg-menu-btn { top:22px!important; right:22px!important; font-size:34px!important; color:#9fb2db!important; opacity:.75!important; }
+        .msg-menu { top:58px!important; right:18px!important; }
+        .chat-media-preview { max-width:min(420px,72vw)!important; max-height:360px!important; border-radius:20px!important; }
+        @media(max-width:520px){
+            .chat-messages{padding:16px!important;gap:14px!important;}
+            .chat-bubble{min-width:min(250px,78vw);padding:18px 18px 16px!important;border-radius:24px!important;}
+            .chat-sender{font-size:16px!important;margin-bottom:14px!important;}
+            .chat-text{font-size:clamp(28px,9vw,44px)!important;}
+            .chat-bubble.received .chat-text{font-size:clamp(20px,7vw,34px)!important;}
+            .chat-bubble-time{font-size:clamp(16px,5vw,24px)!important;}
+            .msg-star{width:50px;height:50px;right:22px;bottom:22px;font-size:28px!important;}
+            .msg-menu-btn{font-size:30px!important;}
+        }
+
+
+        /* ============ MESSAGE TEXT BACK TO NORMAL ============ */
+        .chat-sender { font-size:12px!important; margin-bottom:4px!important; }
+        .chat-text { font-size:14px!important; line-height:1.42!important; font-weight:500!important; letter-spacing:0!important; margin-bottom:4px!important; }
+        .chat-bubble.received .chat-text { font-size:14px!important; }
+        .chat-bubble-time { font-size:11px!important; margin-top:4px!important; gap:4px!important; letter-spacing:0!important; justify-content:flex-end!important; }
+        .chat-bubble-time::after { display:none!important; }
+        .msg-star { position:static!important; display:inline-grid!important; width:auto!important; height:auto!important; background:transparent!important; border:0!important; box-shadow:none!important; font-size:10px!important; margin-left:4px!important; }
+        .chat-bubble { min-width:auto!important; padding:10px 14px 8px!important; }
+        .msg-menu-btn { top:4px!important; right:6px!important; font-size:18px!important; }
+        .msg-menu { top:28px!important; right:6px!important; }
     </style>
 
     <link rel="manifest" href="./manifest.json">
@@ -2108,6 +2189,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+
+    
+    <div id="topQuickTabs" class="top-quick-tabs">
+        <button class="top-quick-btn" onclick="navigateTo('messages')" title="Messages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+            <span id="topMsgBadge" class="top-quick-badge" style="display:none">0</span>
+        </button>
+        <button class="top-quick-btn" onclick="navigateTo('notifications')" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span id="topNotifBadge" class="top-quick-badge" style="display:none">0</span>
+        </button>
+    </div>
 
     <button id="installAppBtn" class="install-btn hidden" onclick="installChatgramApp()"><img src="./chatgram-icon-192.png" alt=""> Install</button>
     <div id="splashScreen" class="splash-screen"><div class="cg-intro"><div class="cg-letter-c">C</div><div class="cg-word"><span>C</span><span>H</span><span>A</span><span>T</span><span>G</span><span>R</span><span>A</span><span>M</span></div><div class="cg-scan"></div></div></div>
@@ -2409,6 +2502,12 @@
         </div>
     </div>
 
+
+    <div id="mediaViewer" class="media-viewer-overlay" onclick="closeMediaViewer(event)">
+        <button class="media-viewer-close" onclick="closeMediaViewer()">×</button>
+        <div id="mediaViewerContent" class="media-viewer-content" onclick="event.stopPropagation()"></div>
+    </div>
+
     <button id="aiFab" class="ai-fab" onclick="toggleAIChat()" title="Drag to set Tronix position">🤖</button>
     <div id="aiPositionHint" class="ai-position-hint">Drag Tronix anywhere — position saved on this device</div>
     <div id="aiChat" class="ai-chat">
@@ -2668,6 +2767,7 @@
         }
 
         function init() {
+            document.body.classList.remove('app-active');
             const saved = localStorage.getItem(DB_KEY);
             if (saved) {
                 try { state = Object.assign(state, JSON.parse(saved)); } catch(e) {}
@@ -2788,8 +2888,14 @@
             const src = m.mediaKey ? (mediaCache[m.mediaKey] || '') : (m.media || '');
             if(!src && m.mediaKey){ loadMediaBlobUrl(m.mediaKey).then(()=>{ if(state.currentPage==='messages' && state.activeChat) openChat(state.activeChat); }); return '<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">Loading large media...</div>'; }
             if(!src) return '';
-            return m.mediaType==='video' ? `<video class="chat-media-preview" src="${src}" controls playsinline></video>` : `<img class="chat-media-preview" src="${src}" alt="shared media">`;
+            return m.mediaType==='video' ? `<video class="chat-media-preview" src="${src}" controls playsinline onclick="event.stopPropagation();openMediaViewer('${src.replace(/'/g,'&#39;')}','video')"></video>` : `<img class="chat-media-preview" src="${src}" alt="shared media" onclick="openMediaViewer('${src.replace(/'/g,'&#39;')}','image')">`;
         }
+        function openMediaViewer(src,type='image'){
+            const box=document.getElementById('mediaViewerContent'), wrap=document.getElementById('mediaViewer'); if(!box||!wrap)return;
+            box.innerHTML = type==='video' ? `<video src="${src}" controls autoplay playsinline></video>` : `<img src="${src}" alt="media">`;
+            wrap.classList.add('active');
+        }
+        function closeMediaViewer(e){ if(e && e.target && e.target.id!=='mediaViewer') return; const wrap=document.getElementById('mediaViewer'), box=document.getElementById('mediaViewerContent'); if(box) box.innerHTML=''; if(wrap) wrap.classList.remove('active'); }
         function firewallText(v){ v=String(v||''); if(/[<>]|javascript:/i.test(v)) throw new Error('Firewall blocked unsafe input'); return v.slice(0,2000); }
         function hashTo6(input){
             let h = 2166136261;
@@ -2930,8 +3036,8 @@
             cloudMsgs.forEach(m=>{
                 const sender=state.users.find(u=>accountId(u)===m.senderPublicId); const receiver=state.users.find(u=>accountId(u)===m.receiverPublicId);
                 const existing=msgs.find(x=>x.cloudMsgId===m.id || (x.senderId===(sender?.id||userId) && Math.abs((x.createdAt||0)-(m.createdAtClient||0))<2500 && (x.text||'')===(m.text||'')));
-                if(existing){ existing.cloudMsgId=m.id; existing.deletedEveryone=!!m.deletedEveryone; existing.deletedForPublic=m.deletedForPublic||existing.deletedForPublic||[]; if(m.media) existing.media=m.media; if(m.mediaType) existing.mediaType=m.mediaType; changed=true; return; }
-                msgs.push({id:Date.now()+Math.random(), cloudMsgId:m.id, text:m.text||'', media:m.media||'', mediaType:m.mediaType||'', senderId:sender?.id||userId, receiverId:receiver?.id||getCurrentUser()?.id, createdAt:m.createdAtClient||Date.now(), readBy:[], deletedEveryone:!!m.deletedEveryone, deletedForPublic:m.deletedForPublic||[]}); changed=true;
+                if(existing){ existing.cloudMsgId=m.id; existing.deletedEveryone=!!m.deletedEveryone; existing.deletedForPublic=m.deletedForPublic||existing.deletedForPublic||[]; existing.readByPublic=m.readByPublic||existing.readByPublic||[]; if(m.media) existing.media=m.media; if(m.mediaType) existing.mediaType=m.mediaType; changed=true; return; }
+                msgs.push({id:Date.now()+Math.random(), cloudMsgId:m.id, text:m.text||'', media:m.media||'', mediaType:m.mediaType||'', senderId:sender?.id||userId, receiverId:receiver?.id||getCurrentUser()?.id, createdAt:m.createdAtClient||Date.now(), readBy:[], readByPublic:m.readByPublic||[], deletedEveryone:!!m.deletedEveryone, deletedForPublic:m.deletedForPublic||[]}); changed=true;
             });
             if(changed){ msgs.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); saveState(); if(state.currentPage==='messages' && state.activeChat===Number(userId)) openChat(userId); else updateBadges(); }
         }
@@ -3124,7 +3230,7 @@
         }
 
         function handleLogout() {
-            sessionStorage.removeItem('chatgram_session_user'); state.currentUserId = null; state.currentUser = null; saveState();
+            sessionStorage.removeItem('chatgram_session_user'); state.currentUserId = null; state.currentUser = null; saveState(); setAppChromeVisible(false);
             document.getElementById('appContainer').style.display = 'none';
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('loginUsername').value = ''; document.getElementById('loginPassword').value = '';
@@ -3177,7 +3283,14 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if(state.currentPage==='settings') renderSettings();
         }
 
+        function setAppChromeVisible(on){
+            document.body.classList.toggle('app-active', !!on);
+            if(!on){
+                document.getElementById('aiChat')?.classList.remove('open');
+            }
+        }
         function showApp() {
+            setAppChromeVisible(false);
             document.getElementById('authContainer').style.display='none';
             document.getElementById('appContainer').style.display='none';
             const splash=document.getElementById('splashScreen');
@@ -3196,6 +3309,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 setTimeout(()=>{
                     splash.style.display='none';
                     document.getElementById('appContainer').style.display='block';
+                    setAppChromeVisible(true);
                     navigateTo(state.currentPage || 'feed'); updateBadges();
                     if('Notification' in window && Notification.permission==='granted') pushLocalNotification('Chatgram updated', 'New Chatgram upgrades are active on your account.');
                 }, 3000);
@@ -3225,8 +3339,11 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const unreadMsgs = me ? Object.values(state.threads||{}).reduce((s, a) => s + (a||[]).filter(m => m.senderId!==me.id && !m.readBy?.includes(me.id)).length, 0) : 0;
             const unreadNotifs = state.notifications.filter(n => !n.read).length;
             const msgBadge = document.getElementById('msgBadge'), notifBadge = document.getElementById('notifBadge');
+            const topMsgBadge = document.getElementById('topMsgBadge'), topNotifBadge = document.getElementById('topNotifBadge');
             if (msgBadge) { msgBadge.style.display = unreadMsgs ? 'flex' : 'none'; msgBadge.textContent = unreadMsgs; }
             if (notifBadge) { notifBadge.style.display = unreadNotifs ? 'flex' : 'none'; notifBadge.textContent = unreadNotifs; }
+            if (topMsgBadge) { topMsgBadge.style.display = unreadMsgs ? 'flex' : 'none'; topMsgBadge.textContent = unreadMsgs; }
+            if (topNotifBadge) { topNotifBadge.style.display = unreadNotifs ? 'flex' : 'none'; topNotifBadge.textContent = unreadNotifs; }
         }
 
 
@@ -3447,7 +3564,13 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function startChat(userId) { getThreadWith(userId); saveState(); navigateTo('messages'); setTimeout(()=>openChat(userId), 30); }
         function openChat(userId) {
             state.activeChat = Number(userId); startCloudThreadSync(userId); const u=byId(userId), me=getCurrentUser(); if(!u||!me) return; const msgs=getThreadWith(userId);
-            msgs.forEach(m=>{ m.readBy ||= []; if(!m.readBy.includes(me.id)) m.readBy.push(me.id); }); saveState(); updateBadges();
+            const mePub=accountId(me);
+            msgs.forEach(m=>{
+                m.readBy ||= []; m.readByPublic ||= [];
+                if(!m.readBy.includes(me.id)) m.readBy.push(me.id);
+                if(!m.readByPublic.includes(mePub)) m.readByPublic.push(mePub);
+                if(m.cloudMsgId && m.senderId!==me.id && window.chatgramCloudUpdateMessage){ window.chatgramCloudUpdateMessage(cloudThreadIdWith(userId), m.cloudMsgId, {readByPublic:m.readByPublic}).catch(console.warn); }
+            }); saveState(); updateBadges();
             let lastDay='';
             const htmlMsgs = msgs.map(m=>{
                 const sender=byId(m.senderId)||{}; const mine=m.senderId===me.id; const day=formatMsgDay(m.createdAt); let dayHtml='';
@@ -3455,7 +3578,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 const mePub=accountId(me);
                 if(m.deletedEveryone || (m.deletedForPublic||[]).includes(mePub)) return '';
                 const menuId='msgMenu_'+String(m.id).replace(/\W/g,'_');
-                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?`<span class="msg-star ${((m.readBy||[]).length>1)?'seen':''}">★</span>`:''}</div></div>`;
+                return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?`<span class="msg-star ${((m.readByPublic||[]).includes(accountId(u)) || (m.readBy||[]).includes(u.id))?'seen':''}">★</span>`:''}</div></div>`;
             }).join('');
             document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button><button class="chat-bg-menu-btn" onclick="changeMsgBackground()">⋮</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.m4v,.webm" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
             renderMessages(); setTimeout(()=>{applyChatBackground(); const c=document.getElementById('chatMessages'); if(c) c.scrollTop=c.scrollHeight;},50);
@@ -3464,8 +3587,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const input=document.getElementById('chatInput'); let text=input?.value.trim(); const me=getCurrentUser(); if(!text||!state.activeChat||!me)return;
             try { text=firewallText(text); } catch(e){ return alert(e.message); }
             const msgs=getThreadWith(state.activeChat);
-            const mid=Date.now(); msgs.push({id:mid, text, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
-            const other=byId(state.activeChat); if(other && window.chatgramCloudAddMessage){ window.chatgramCloudAddMessage(cloudThreadIdWith(state.activeChat), {text, senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, deletedForPublic:[]}).then(cid=>{ const mm=msgs.find(x=>x.id===mid); if(mm){ mm.cloudMsgId=cid; saveState(); } }).catch(console.warn); }
+            const mid=Date.now(); msgs.push({id:mid, text, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id], readByPublic:[accountId(me)]});
+            const other=byId(state.activeChat); if(other && window.chatgramCloudAddMessage){ window.chatgramCloudAddMessage(cloudThreadIdWith(state.activeChat), {text, senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, readByPublic:[accountId(me)], deletedForPublic:[]}).then(cid=>{ const mm=msgs.find(x=>x.id===mid); if(mm){ mm.cloudMsgId=cid; saveState(); } }).catch(console.warn); }
             logHistory('Message sent'); input.value=''; saveState(); notifyRealtime('message'); openChat(state.activeChat);
         }
         function toggleMsgMenu(id){ document.querySelectorAll('.msg-menu.open').forEach(x=>{ if(x.id!==id)x.classList.remove('open'); }); document.getElementById(id)?.classList.toggle('open'); }
@@ -3495,7 +3618,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 try { await saveMediaBlob(mediaKey, file); } catch(localErr) { console.warn('Local media save failed; using temporary preview', localErr); }
                 mediaCache[mediaKey] = URL.createObjectURL(file);
                 const msgs=getThreadWith(state.activeChat);
-                msgs.push({id:mid, text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id]});
+                msgs.push({id:mid, text:file.name, mediaKey, mediaType:file.type.startsWith('video')?'video':'image', fileName:file.name, fileSize:file.size, senderId:me.id, receiverId:Number(state.activeChat), createdAt:mid, readBy:[me.id], readByPublic:[accountId(me)]});
                 logHistory('Media message sent'); saveState(); notifyRealtime('message'); openChat(state.activeChat);
                 // Upload to Supabase first, Firebase fallback second, then send cloud message for other devices.
                 setTimeout(async()=>{
@@ -3504,7 +3627,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                         if(window.chatgramCloudUploadMedia) url=await window.chatgramCloudUploadMedia('dm/'+accountId(me)+'/'+mid+'_'+file.name, file);
                         if(!url && file.size < 650000) url=await new Promise(res=>{ const r=new FileReader(); r.onload=ev=>res(ev.target.result); r.readAsDataURL(file); });
                         if(url && other && window.chatgramCloudAddMessage){
-                            const cid=await window.chatgramCloudAddMessage(cloudThreadIdWith(other.id), {text:file.name, media:url, mediaType:file.type.startsWith('video')?'video':'image', senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, deletedForPublic:[]});
+                            const cid=await window.chatgramCloudAddMessage(cloudThreadIdWith(other.id), {text:file.name, media:url, mediaType:file.type.startsWith('video')?'video':'image', senderPublicId:accountId(me), receiverPublicId:accountId(other), createdAtClient:mid, readByPublic:[accountId(me)], deletedForPublic:[]});
                             const mm=getThreadWith(other.id).find(x=>x.id===mid); if(mm){ mm.cloudMsgId=cid; mm.media=url; saveState(); }
                         }
                     } catch(uploadErr){
@@ -3849,7 +3972,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         async function openStoryViewer(storyId) {
             const st=state.stories.find(x=>x.id===storyId); if(!st)return;
             if(!history.state?.storyOpen) history.pushState({storyOpen:true}, 'Story');
-            const u=byId(st.userId)||{}; const viewer=document.getElementById('storyViewer'); viewer.classList.add('active');
+            const u=byId(st.userId)||{}; const viewer=document.getElementById('storyViewer'); viewer.classList.add('active'); document.body.classList.add('story-open');
             document.getElementById('storyAvatar').src=u.avatar||st.avatar;
             document.getElementById('storyUsername').textContent=u.username||st.username;
             document.getElementById('storyTime').textContent=st.mediaType==='video' && st.duration ? `${timeAgo(st.id)} · ${formatDuration(st.duration)}` : timeAgo(st.id);
@@ -3892,7 +4015,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             reply.onkeypress=(e)=>{ if(e.key==='Enter' && reply.value.trim()){ startChat(st.userId); setTimeout(()=>{ document.getElementById('chatInput').value='Story reply: '+reply.value.trim(); sendMessage(); closeStoryViewer(); },50); } };
             saveState();
         }
-        function closeStoryViewer(){ activeStoryIds=[]; activeStoryPos=0; clearInterval(storyTimer); const v=document.querySelector('#storyViewer video'); if(v) v.pause(); const a=document.getElementById('storyBgAudio'); if(a){a.pause(); a.remove();} document.querySelectorAll('.sticker').forEach(x=>x.remove()); document.getElementById('storyViewer').classList.remove('active'); saveState(); renderStories(); }
+        function closeStoryViewer(){ activeStoryIds=[]; activeStoryPos=0; clearInterval(storyTimer); const v=document.querySelector('#storyViewer video'); if(v) v.pause(); const a=document.getElementById('storyBgAudio'); if(a){a.pause(); a.remove();} document.querySelectorAll('.sticker').forEach(x=>x.remove()); document.getElementById('storyViewer').classList.remove('active'); document.body.classList.remove('story-open'); saveState(); renderStories(); }
 
         // ============ CREATE UPLOAD ============
         function ensureCreateControls(){ const uploadArea=document.getElementById('uploadArea'); if(!uploadArea || document.getElementById('createTypeRow'))return; const row=document.createElement('div'); row.id='createTypeRow'; row.className='create-type-row'; row.innerHTML=`<button class="create-type-btn active" data-type="post" onclick="setCreateType('post')">Post</button><button class="create-type-btn" data-type="reel" onclick="setCreateType('reel')">Reel</button><button class="create-type-btn" data-type="story" onclick="setCreateType('story')">Story</button>`; uploadArea.parentNode.insertBefore(row, uploadArea); }
