@@ -2236,6 +2236,64 @@
             .chat-bubble{max-width:84%!important;}
             .chat-messages{padding:10px!important;}
         }
+
+
+        /* ============ REELS SAFE FIT / NO TOP CROP FIX ============ */
+        @media(max-width:768px){
+            #reelsPage { height:100dvh!important; overflow:hidden!important; background:#000!important; }
+            #reelsPage .content-area{
+                height:calc(100dvh - 92px)!important;
+                padding-top:max(12px, env(safe-area-inset-top))!important;
+                padding-bottom:8px!important;
+                box-sizing:border-box!important;
+                overflow:hidden!important;
+            }
+            #reelsPage .reels-container{height:100%!important; padding:0!important; gap:0!important; overflow-y:auto!important; scroll-snap-type:y mandatory!important;}
+            #reelsPage .reel-card{height:100%!important; min-height:100%!important; width:100vw!important; margin:0 auto!important; border-radius:0!important; scroll-snap-align:start!important; overflow:hidden!important;}
+            #reelsPage .reel-video{width:100%!important; height:100%!important; object-fit:contain!important; background:#000!important;}
+            #reelsPage .reel-card::after{top:max(22px, calc(env(safe-area-inset-top) + 14px))!important; left:16px!important; opacity:.72!important;}
+            #reelsPage .reel-actions{right:8px!important; bottom:118px!important;}
+            #reelsPage .reel-info{left:14px!important; right:82px!important; bottom:22px!important;}
+        }
+        @media(max-width:420px){
+            #reelsPage .content-area{height:calc(100dvh - 88px)!important; padding-top:10px!important;}
+            #reelsPage .reel-actions{bottom:112px!important;}
+            #reelsPage .reel-info{bottom:18px!important;}
+        }
+
+
+        /* ============ DEVICE MESSAGE BUBBLE COLOR CUSTOMIZER ============ */
+        :root { --chat-sent-bubble:#0b84ff; --chat-received-bubble:#1b2028; }
+        .chat-bubble.sent { background:var(--chat-sent-bubble)!important; }
+        .chat-bubble.received { background:var(--chat-received-bubble)!important; }
+        .bubble-color-dot { width:24px; height:24px; border-radius:50%; display:inline-block; border:2px solid rgba(255,255,255,.45); vertical-align:middle; margin-right:7px; }
+
+
+        /* ============ HIDE TOP QUICK TABS ON REELS ============ */
+        body.reels-open #topQuickTabs { display:none!important; }
+
+
+        /* ============ REEL BOTTOM ALIGN + C LOADER PATCH ============ */
+        #reelsPage .content-area { height:calc(100dvh - 86px)!important; padding-bottom:0!important; }
+        #reelsPage .reel-card { height:100%!important; min-height:100%!important; }
+        #reelsPage .reel-info { bottom:92px!important; left:14px!important; right:84px!important; }
+        #reelsPage .reel-caption { font-size:18px!important; line-height:1.25!important; margin-bottom:8px!important; }
+        #reelsPage .reel-upload-time { display:block!important; margin-top:4px!important; margin-bottom:4px!important; font-size:14px!important; color:rgba(255,255,255,.9)!important; font-weight:700!important; }
+        #reelsPage .reel-music { display:flex!important; align-items:center!important; gap:10px!important; margin-top:0!important; font-size:14px!important; color:rgba(255,255,255,.92)!important; font-weight:700!important; white-space:normal!important; }
+        #reelsPage .reel-music::before { content:'♫'; color:#8fd3ff; font-size:20px; line-height:1; }
+        #reelsPage .reel-inline-duration { margin-left:4px; padding:2px 8px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; font-weight:900; }
+        #reelsPage .reel-card > .media-duration { display:none!important; }
+        #reelsPage .reel-actions { bottom:154px!important; }
+        .reel-loader { position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:#000; transition:opacity .28s ease, visibility .28s ease; pointer-events:none; }
+        .reel-card.reel-loaded .reel-loader { opacity:0; visibility:hidden; }
+        .reel-c-loader { width:92px; height:92px; border-radius:50%; display:grid; place-items:center; color:#fff; background:#050505; border:4px solid #fff; font-size:58px; font-weight:1000; font-family:Arial,Helvetica,sans-serif; box-shadow:0 0 0 8px rgba(255,255,255,.08),0 0 40px rgba(255,255,255,.28); animation:reelCSpin 1.05s linear infinite, reelCPulse 1.4s ease-in-out infinite alternate; }
+        @keyframes reelCSpin { to{transform:rotate(360deg)} }
+        @keyframes reelCPulse { from{filter:brightness(.75); box-shadow:0 0 0 8px rgba(255,255,255,.05),0 0 20px rgba(255,255,255,.18)} to{filter:brightness(1.25); box-shadow:0 0 0 12px rgba(255,255,255,.10),0 0 55px rgba(255,255,255,.45)} }
+        @media(max-width:430px){
+            #reelsPage .content-area { height:calc(100svh - 86px)!important; }
+            #reelsPage .reel-info { bottom:88px!important; right:82px!important; }
+            #reelsPage .reel-actions { bottom:148px!important; }
+        }
     </style>
 
     <link rel="manifest" href="./manifest.json">
@@ -3385,7 +3443,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function navigateTo(page) {
             if (!getCurrentUser()) return;
             pauseAllAppVideos();
-            state.currentPage = page; saveState();
+            state.currentPage = page; document.body.classList.toggle('reels-open', page==='reels'); saveState();
             document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             const el = document.getElementById(page + 'Page'); if (el) el.classList.add('active');
@@ -3559,9 +3617,10 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if (!reels.length) { box.innerHTML = `<div class="empty-state"><h3>No reels yet</h3><p>Upload a reel and it will show in this premium Instagram-style Reels UI.</p><button class="mini-btn" onclick="openCreateModal('reel')">Upload reel</button></div>`; return; }
             box.innerHTML = reels.map(r => {
                 const u=byId(r.userId)||{}; const following=(getCurrentUser().followingIds||[]).includes(u.id); const liked=userLikedPost(r);
-                return `<div class="reel-card" ondblclick="doubleTapLike(${r.id}, this)">
+                return `<div class="reel-card" onclick="handleReelTap(event, ${r.id}, this)" ondblclick="doubleTapLike(${r.id}, this)">
                     ${renderReelMedia(r)}
                     ${renderReelAudio(r)}
+                    <div class="reel-loader"><div class="reel-c-loader">C</div></div>
                     <div class="reel-big-heart" id="heart-${r.id}">♥</div>
                     <div class="reel-gradient">
                         <div class="reel-user">
@@ -3570,7 +3629,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                             ${u.id!==getCurrentUser().id?`<button class="btn-reel-follow ${following?'following':''}" onclick="event.stopPropagation();toggleFollowUser(${u.id}, this)">${following?'Following':'Follow'}</button>`:`<button class="btn-reel-follow btn-remove-premium" onclick="event.stopPropagation();postOptions(${r.id})">Remove</button>`}
                         </div>
                         <div class="reel-caption">${escapeHTML(r.caption)}</div><div class="reel-upload-time">${timeAgo(r.id)}</div>
-                        <div class="reel-music">🎵 Original Audio - ${escapeHTML(u.username||'user')}</div>
+                        <div class="reel-music">Original Audio - ${escapeHTML(u.username||'user')} ${r.duration?`<span class="reel-inline-duration">${formatDuration(r.duration)}</span>`:''}</div>
                     </div>
                     <div class="reel-actions">
                         <div class="reel-action" onclick="event.stopPropagation();toggleLike(${r.id})">
@@ -3594,19 +3653,36 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             setTimeout(()=>{setupReelAutoplay(); setupSmartMediaUnloader(document.getElementById('reelsContainer'));}, 80);
         }
         function skipReel(dir, btn){ const card=btn.closest('.reel-card'); const target=dir>0?card.nextElementSibling:card.previousElementSibling; if(target) target.scrollIntoView({behavior:'smooth',block:'center'}); }
+        let reelTapTimer=null;
+        function handleReelTap(e, postId, card){
+            if(e.target.closest('.reel-actions,.reel-user,button,.btn-reel-follow')) return;
+            clearTimeout(reelTapTimer);
+            reelTapTimer=setTimeout(()=>{
+                const v=card.querySelector('video');
+                const a=card.querySelector('.reel-bg-audio');
+                if(v){ if(v.paused){ v.play().catch(()=>{}); playMediaAudio(a); card.classList.add('reel-active'); } else { v.pause(); pauseMediaAudio(a); } }
+                else if(a){ if(a.paused) playMediaAudio(a); else pauseMediaAudio(a); }
+            },180);
+        }
         let reelObserver = null;
         function setupReelAutoplay(){
             if(reelObserver) reelObserver.disconnect();
             const cards=[...document.querySelectorAll('.reel-card')];
+            cards.forEach(card=>{
+                const v=card.querySelector('video.reel-video');
+                const img=card.querySelector('img.reel-video');
+                if(img){ if(img.complete) card.classList.add('reel-loaded'); else img.onload=()=>card.classList.add('reel-loaded'); }
+                if(v){ v.onloadeddata=()=>card.classList.add('reel-loaded'); v.onplaying=()=>card.classList.add('reel-loaded'); v.oncanplay=()=>card.classList.add('reel-loaded'); }
+            });
             reelObserver = new IntersectionObserver(entries=>{
                 entries.forEach(entry=>{
                     const v=entry.target.querySelector('video'); const a=entry.target.querySelector('.reel-bg-audio');
-                    if(entry.isIntersecting && entry.intersectionRatio>0.65){ entry.target.classList.add('reel-active'); if(v){v.volume=1; v.play().catch(()=>{ v.muted=true; v.play().catch(()=>{}); });} playMediaAudio(a); }
+                    if(entry.isIntersecting && entry.intersectionRatio>0.65){ entry.target.classList.add('reel-active'); if(v){v.volume=1; v.play().then(()=>entry.target.classList.add('reel-loaded')).catch(()=>{ v.muted=true; v.play().then(()=>entry.target.classList.add('reel-loaded')).catch(()=>{}); });} else entry.target.classList.add('reel-loaded'); playMediaAudio(a); }
                     else { entry.target.classList.remove('reel-active'); if(v) v.pause(); pauseMediaAudio(a); }
                 });
             },{threshold:[0,.65,1]});
             cards.forEach(c=>reelObserver.observe(c));
-            const first=cards[0]; const fv=first?.querySelector('video'); const fa=first?.querySelector('.reel-bg-audio'); if(fv){ fv.volume=1; fv.play().catch(()=>{ fv.muted=true; fv.play().catch(()=>{}); }); } playMediaAudio(fa);
+            const first=cards[0]; const fv=first?.querySelector('video'); const fa=first?.querySelector('.reel-bg-audio'); if(fv){ fv.volume=1; fv.play().then(()=>first.classList.add('reel-loaded')).catch(()=>{ fv.muted=true; fv.play().then(()=>first.classList.add('reel-loaded')).catch(()=>{}); }); } else if(first) first.classList.add('reel-loaded'); playMediaAudio(fa);
         }
 
         function toggleReelSound(postId, el){
@@ -3639,17 +3715,54 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function applyChatBackground(){
             const c=document.getElementById('chatMessages'); if(!c)return;
             const bg=getChatBg();
-            c.style.backgroundImage=''; c.style.backgroundSize=''; c.style.backgroundPosition='';
-            if(bg.startsWith('data:image')) { c.style.backgroundImage=`linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.52)), url(${bg})`; c.style.backgroundSize='cover'; c.style.backgroundPosition='center'; }
-            else if(bg==='plain') c.style.background='#050505';
-            else c.style.backgroundImage='radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px)';
+            c.style.setProperty('background-image', '', 'important');
+            c.style.setProperty('background-size', '', 'important');
+            c.style.setProperty('background-position', '', 'important');
+            const themes={
+                dots:'radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(180deg,#06080d,#030407)',
+                plain:'#050505',
+                blue:'linear-gradient(135deg,#041b33,#020812 55%,#001a2d)',
+                purple:'linear-gradient(135deg,#1a0828,#06020d 55%,#16001f)',
+                green:'linear-gradient(135deg,#042016,#020b07 60%,#002415)',
+                red:'linear-gradient(135deg,#250507,#080202 60%,#21000a)',
+                sunset:'linear-gradient(135deg,#201026,#3b1224 48%,#5c2508)',
+                glass:'radial-gradient(circle at 20% 0,rgba(0,149,246,.16),transparent 32%),radial-gradient(circle at 90% 15%,rgba(225,48,108,.13),transparent 28%),#06080d'
+            };
+            if(bg.startsWith('data:image')) {
+                c.style.setProperty('background-image', `linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.52)), url(${bg})`, 'important');
+                c.style.setProperty('background-size', 'cover', 'important');
+                c.style.setProperty('background-position', 'center', 'important');
+            } else {
+                c.style.setProperty('background', themes[bg] || themes.dots, 'important');
+                if(bg==='dots') c.style.setProperty('background-size','22px 22px, auto','important');
+            }
         }
+        function applyMessageBubbleColors(){
+            const sent=localStorage.getItem('chatgram_sent_bubble') || '#0b84ff';
+            const received=localStorage.getItem('chatgram_received_bubble') || '#1b2028';
+            document.documentElement.style.setProperty('--chat-sent-bubble', sent);
+            document.documentElement.style.setProperty('--chat-received-bubble', received);
+        }
+        function setMsgBubbleColor(which,color){
+            localStorage.setItem(which==='sent'?'chatgram_sent_bubble':'chatgram_received_bubble', color);
+            applyMessageBubbleColors();
+            document.getElementById('chatThemePanel')?.remove();
+        }
+        function setChatBgTheme(theme){ localStorage.setItem('chatgram_chat_bg', theme); document.getElementById('chatThemePanel')?.remove(); applyChatBackground(); }
         function changeMsgBackground(){
-            const choose=confirm('Select image from this device for chat background?\n\nOK = choose image\nCancel = remove custom background');
-            if(!choose){ localStorage.setItem('chatgram_chat_bg','dots'); applyChatBackground(); return; }
-            const input=document.createElement('input'); input.type='file'; input.accept='image/*';
-            input.onchange=()=>{ const file=input.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ localStorage.setItem('chatgram_chat_bg', e.target.result); applyChatBackground(); }; reader.readAsDataURL(file); };
-            input.click();
+            document.getElementById('chatThemePanel')?.remove();
+            const panel=document.createElement('div'); panel.id='chatThemePanel';
+            panel.style.cssText='position:fixed;right:14px;bottom:110px;z-index:10020;background:rgba(10,12,18,.96);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:12px;box-shadow:0 20px 70px rgba(0,0,0,.65);backdrop-filter:blur(18px);display:grid;grid-template-columns:repeat(2, minmax(92px,1fr));gap:8px;max-width:260px';
+            const opts=[['dots','Default'],['blue','Blue'],['purple','Purple'],['green','Green'],['red','Red'],['sunset','Sunset'],['glass','Glass'],['plain','Plain']];
+            panel.innerHTML=opts.map(([id,label])=>`<button onclick="setChatBgTheme('${id}')" style="border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;background:#151922;color:white;font-weight:800">${label}</button>`).join('')+
+                `<div style="grid-column:1/-1;color:#9fb2db;font-weight:900;font-size:12px;margin-top:6px">Sent message box color</div>`+
+                ['#0b84ff','#7c3aed','#00a884','#ff3040','#ff8a00','#111827'].map(c=>`<button onclick="setMsgBubbleColor('sent','${c}')" style="border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:#151922;color:white;font-weight:800"><span class="bubble-color-dot" style="background:${c}"></span>Sent</button>`).join('')+
+                `<div style="grid-column:1/-1;color:#9fb2db;font-weight:900;font-size:12px;margin-top:6px">Received message box color</div>`+
+                ['#1b2028','#263238','#102a43','#2b1b3f','#3a1f1f','#0f2a1d'].map(c=>`<button onclick="setMsgBubbleColor('received','${c}')" style="border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:#151922;color:white;font-weight:800"><span class="bubble-color-dot" style="background:${c}"></span>Recv</button>`).join('')+
+                `<button id="chatBgImageBtn" style="grid-column:1/-1;border:1px solid rgba(0,149,246,.35);border-radius:12px;padding:10px;background:linear-gradient(135deg,#0095f6,#7c3aed);color:white;font-weight:900">Choose background image from device</button>`;
+            document.body.appendChild(panel);
+            document.getElementById('chatBgImageBtn').onclick=()=>{ const input=document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange=()=>{ const file=input.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ localStorage.setItem('chatgram_chat_bg', e.target.result); panel.remove(); applyChatBackground(); }; reader.readAsDataURL(file); }; input.click(); };
+            setTimeout(()=>{ const closer=e=>{ if(panel && !panel.contains(e.target) && !e.target.closest('.chat-bg-menu-btn')){ panel.remove(); document.removeEventListener('click',closer); } }; document.addEventListener('click',closer); },50);
         }
         function startChat(userId) { getThreadWith(userId); saveState(); navigateTo('messages'); setTimeout(()=>openChat(userId), 30); }
         function openChat(userId, keepScroll=false) {
@@ -3674,7 +3787,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                 return `${dayHtml}<div class="chat-bubble ${mine?'sent':'received'}"><button class="msg-menu-btn" onclick="event.stopPropagation();toggleMsgMenu('${menuId}')">⋮</button><div id="${menuId}" class="msg-menu"><button onclick="deleteMessageForMe('${m.id}')">Delete from me</button>${mine?`<button class="danger" onclick="deleteMessageForEveryone('${m.id}')">Delete from everyone</button>`:''}</div><div class="chat-sender">${mine?'You':escapeHTML(sender.username||u.username)}</div><div class="chat-text">${renderMessageMedia(m)}${escapeHTML(m.text||'')}</div><div class="chat-bubble-time">${formatMsgTime(m.createdAt)} ${mine?`<span class="msg-star ${((m.readByPublic||[]).includes(accountId(u)) || (m.readBy||[]).includes(u.id))?'seen':''}">★</span>`:''}</div></div>`;
             }).join('');
             document.getElementById('chatArea').innerHTML = `<div class="chat-header"><img src="${u.avatar}" alt=""><div class="chat-header-info"><div class="chat-header-name" onclick="viewProfile(${u.id})">${escapeHTML(u.username)} ${vipBadge(u)}</div><div class="chat-header-status">ID: ${accountId(u)} · ${msgs.length?('last message '+formatMsgTime(msgs.at(-1).createdAt)):'online'}</div></div><button class="mini-btn secondary" onclick="startVoiceCall(${u.id})">Call</button><button class="chat-bg-menu-btn" onclick="changeMsgBackground()">⋮</button></div><div class="chat-messages" id="chatMessages">${htmlMsgs || '<div class="empty-state"><h3>Start chatting</h3><p>Send a message below.</p></div>'}</div><div class="chat-input-area"><button class="mini-btn secondary" onclick="document.getElementById('dmMediaInput').click()">Media</button><input id="dmMediaInput" type="file" accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.m4v,.webm" style="display:none" onchange="sendMediaMessage(event)"><input class="chat-input" type="text" placeholder="Message..." id="chatInput" onkeypress="if(event.key==='Enter')sendMessage()"><button class="chat-send" onclick="sendMessage()">Send</button></div>`;
-            renderMessages(); setTimeout(()=>{applyChatBackground(); const c=document.getElementById('chatMessages'); if(c){ if(!keepScroll) c.scrollTop=c.scrollHeight; c.onscroll=()=>{ if(c.scrollTop<40 && getChatLimit(userId)<getThreadWith(userId).length) expandChatHistory(userId); }; setupSmartMediaUnloader(c); }},50);
+            renderMessages(); setTimeout(()=>{applyChatBackground(); applyMessageBubbleColors(); const c=document.getElementById('chatMessages'); if(c){ if(!keepScroll) c.scrollTop=c.scrollHeight; c.onscroll=()=>{ if(c.scrollTop<40 && getChatLimit(userId)<getThreadWith(userId).length) expandChatHistory(userId); }; setupSmartMediaUnloader(c); }},50);
         }
         function sendMessage() {
             const input=document.getElementById('chatInput'); let text=input?.value.trim(); const me=getCurrentUser(); if(!text||!state.activeChat||!me)return;
@@ -3994,6 +4107,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         function toggleFollowUser(userId, btn) { const me=getCurrentUser(), u=byId(userId); if(!u||u.id===me.id)return; me.followingIds ||= []; u.followerIds ||= []; const on=me.followingIds.includes(u.id); if(on){me.followingIds=me.followingIds.filter(id=>id!==u.id); u.followerIds=u.followerIds.filter(id=>id!==me.id);} else {me.followingIds.push(u.id); u.followerIds.push(me.id); addNotification(u.id, me, `<strong>${escapeHTML(me.username)}</strong> started following you.`);} saveState(); if(btn) {btn.textContent=on?'Follow':'Following'; btn.classList.toggle('following', !on);} if(state.currentPage==='feed')renderFeed(); if(state.currentPage==='explore')filterExplore(); if(state.currentPage==='profile')renderProfile(u.id); }
         function toggleLike(postId, btn) { const p=state.posts.find(x=>x.id===postId), me=getCurrentUser(); if(!p||!me)return; p.likedBy ||= []; p.likedByPublic ||= []; const pub=accountId(me); const on=p.likedByPublic.includes(pub); p.likedByPublic=on?p.likedByPublic.filter(id=>id!==pub):[...p.likedByPublic,pub]; p.likedBy=on?p.likedBy.filter(id=>id!==me.id):[...new Set([...p.likedBy, me.id])]; if(!on){const owner=byId(p.userId); if(owner)addNotification(owner.id, me, `<strong>${escapeHTML(me.username)}</strong> liked your ${p.type}.`, 'like', {targetType:p.type||'post'});} saveState(); syncPostToCloud(p); if(state.currentPage==='reels')renderReels(); else renderFeedPosts(); }
         function doubleTapLike(postId){
+            clearTimeout(reelTapTimer);
             const p=state.posts.find(x=>x.id===postId), me=getCurrentUser();
             if(p && me && !userLikedPost(p, me)){
                 p.likedBy ||= []; p.likedByPublic ||= [];
@@ -4353,6 +4467,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             applyTronixPosition();
         }
         setTimeout(setupTronixDrag, 500);
+        applyMessageBubbleColors();
 
 
         let deferredInstallPrompt = null;
