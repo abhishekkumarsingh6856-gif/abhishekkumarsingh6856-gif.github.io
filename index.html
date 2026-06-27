@@ -2104,8 +2104,18 @@
         .reel-action { display:flex!important; flex-direction:column!important; align-items:center!important; gap:7px!important; font-weight:900!important; }
         .reel-action svg { width:60px!important; height:60px!important; padding:14px!important; box-sizing:border-box!important; border-radius:50%!important; background:rgba(7,12,18,.62)!important; border:1px solid rgba(255,255,255,.20)!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 8px 26px rgba(0,0,0,.35)!important; backdrop-filter:blur(12px)!important; }
         .reel-action span { font-size:14px!important; font-weight:950!important; color:#fff!important; text-shadow:0 2px 10px rgba(0,0,0,.65)!important; }
-        .reel-action:first-child svg { stroke:#ff2f5f!important; fill:#ff2f5f!important; }
-        @media(max-width:480px){ .reel-action svg{width:54px!important;height:54px!important;padding:13px!important}.reel-actions{gap:17px!important;right:9px!important} .reel-action span{font-size:13px!important} }
+        /* Heart: outline-only when unliked (match post heart). Filled red only when liked. */
+        .reel-action.reel-like-action svg { stroke:#fff!important; fill:none!important; }
+        .reel-action.reel-like-action.liked svg { stroke:#ff2f5f!important; fill:#ff2f5f!important; }
+        /* Responsive: only WIDTH (breadth) of reel changes per phone; length/height stays fixed. Action buttons scale with phone. */
+        .reel-card { width: clamp(300px, 94vw, 460px) !important; height: min(760px, calc(100svh - 96px)) !important; min-height: 560px; margin: 0 auto; }
+        .reel-action svg { width: clamp(46px, 13vw, 60px) !important; height: clamp(46px, 13vw, 60px) !important; padding: clamp(11px, 3vw, 14px) !important; }
+        .reel-action span { font-size: clamp(12px, 3.4vw, 14px) !important; }
+        .reel-actions { right: clamp(8px, 2.5vw, 14px) !important; gap: clamp(14px, 4vw, 20px) !important; bottom: clamp(90px, 14vw, 118px) !important; }
+        @media(max-width:480px){
+            .reel-card { width: 100vw !important; border-radius: 0 !important; }
+            .reels-container { gap: 0 !important; }
+        }
         .media-viewer-overlay { position:fixed; inset:0; z-index:10020; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.92); backdrop-filter:blur(10px); padding:18px; }
         .media-viewer-overlay.active { display:flex; }
         .media-viewer-content { max-width:96vw; max-height:92dvh; border-radius:18px; overflow:hidden; box-shadow:0 20px 100px rgba(0,0,0,.75); }
@@ -2633,7 +2643,19 @@
         </div>
         <div id="aiChatBody" class="ai-body"><div class="ai-msg bot">Hi, main Tronix hoon. Complex questions ke liye detailed step-by-step answer de sakta hoon: coding, business, study, debugging, planning, captions, reels growth — sab.</div></div>
         <div class="ai-tools"><button class="ai-chip" onclick="askTronixPreset('Explain this step by step: ')">Step-by-step</button><button class="ai-chip" onclick="askTronixPreset('Debug this problem: ')">Debug</button><button class="ai-chip" onclick="askTronixPreset('Make a complete plan for: ')">Plan</button><button class="ai-chip" onclick="clearTronixChat()">Clear</button></div>
-        <div class="ai-input"><textarea id="aiChatInput" placeholder="Ask Tronix a complex question..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendAIChat()}"></textarea><button onclick="sendAIChat()">Send</button></div>
+        <div id="tronixImagePreviewWrap" style="display:none;padding:8px 12px 0;">
+            <div style="position:relative;display:inline-block;">
+                <img id="tronixImagePreview" alt="attached" style="max-width:140px;max-height:140px;border-radius:12px;border:1px solid rgba(255,255,255,.2);display:block;">
+                <button type="button" onclick="clearTronixImage()" title="Remove image" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:0;background:#000;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);">×</button>
+            </div>
+            <div style="font-size:11px;color:#a8dfff;margin-top:4px;">Photo attached — ask your doubt about it.</div>
+        </div>
+        <div class="ai-input" style="align-items:flex-end;">
+            <button type="button" onclick="document.getElementById('tronixCameraInput').click()" title="Attach / take a photo to ask doubt" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0;">📷</button>
+            <input type="file" id="tronixCameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleTronixImage(event)">
+            <textarea id="aiChatInput" placeholder="Ask Tronix anything — attach a photo to ask doubts on it..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendAIChat()}"></textarea>
+            <button onclick="sendAIChat()">Send</button>
+        </div>
     </div>
 
 
@@ -3632,8 +3654,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
                         <div class="reel-music">Original Audio - ${escapeHTML(u.username||'user')} ${r.duration?`<span class="reel-inline-duration">${formatDuration(r.duration)}</span>`:''}</div>
                     </div>
                     <div class="reel-actions">
-                        <div class="reel-action" onclick="event.stopPropagation();toggleLike(${r.id})">
-                            <svg viewBox="0 0 24 24" fill="${liked?'var(--red)':'none'}" stroke="white" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span>${formatNumber(postLikeCount(r))}</span>
+                        <div class="reel-action reel-like-action ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike(${r.id})">
+                            <svg viewBox="0 0 24 24" fill="${liked?'var(--red)':'none'}" stroke="${liked?'var(--red)':'white'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span>${formatNumber(postLikeCount(r))}</span>
                         </div>
                         <div class="reel-action" onclick="event.stopPropagation();openCommentsModal(${r.id})">
                             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg><span>${(r.comments||[]).length}</span>
@@ -4349,7 +4371,45 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             }
         }
         function askTronixPreset(prefix){ const input=document.getElementById('aiChatInput'); input.value=prefix; input.focus(); }
-        function clearTronixChat(){ tronixMessages = [{role:'system', content:buildTronixSystemPrompt()}]; document.getElementById('aiChatBody').innerHTML='<div class="ai-msg bot">Chat cleared. Ask me anything complex.</div>'; }
+        function clearTronixChat(){ tronixMessages = [{role:'system', content:buildTronixSystemPrompt()}]; document.getElementById('aiChatBody').innerHTML='<div class="ai-msg bot">Chat cleared. Ask me anything complex.</div>'; clearTronixImage(); }
+        let tronixAttachedImage = null; // {dataUrl, mime, name}
+        function handleTronixImage(ev){
+            const file = ev.target.files && ev.target.files[0]; if(!file) return;
+            if(!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                const dataUrl = e.target.result;
+                // Downscale large images to keep API payload small
+                const img = new Image();
+                img.onload = () => {
+                    const maxDim = 1280;
+                    let w = img.width, h = img.height;
+                    if(Math.max(w,h) > maxDim){ const s = maxDim/Math.max(w,h); w = Math.round(w*s); h = Math.round(h*s); }
+                    const cnv = document.createElement('canvas'); cnv.width=w; cnv.height=h;
+                    cnv.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const out = cnv.toDataURL('image/jpeg', 0.85);
+                    tronixAttachedImage = { dataUrl: out, mime: 'image/jpeg', name: file.name };
+                    const prev = document.getElementById('tronixImagePreview');
+                    const wrap = document.getElementById('tronixImagePreviewWrap');
+                    if(prev) prev.src = out;
+                    if(wrap) wrap.style.display = 'block';
+                    const inp = document.getElementById('aiChatInput');
+                    if(inp && !inp.value.trim()) inp.placeholder = 'Ask your doubt about this photo...';
+                };
+                img.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+            ev.target.value = '';
+        }
+        function clearTronixImage(){
+            tronixAttachedImage = null;
+            const wrap = document.getElementById('tronixImagePreviewWrap');
+            const prev = document.getElementById('tronixImagePreview');
+            if(wrap) wrap.style.display = 'none';
+            if(prev) prev.src = '';
+            const inp = document.getElementById('aiChatInput');
+            if(inp) inp.placeholder = 'Ask Tronix anything — attach a photo to ask doubts on it...';
+        }
         function renderTronixText(t){ return escapeHTML(t).replace(/```([\s\S]*?)```/g,'<pre style="white-space:pre-wrap;background:#05070b;border:1px solid rgba(255,255,255,.1);padding:10px;border-radius:12px;overflow:auto">$1</pre>').replace(/\n/g,'<br>'); }
         async function tronixFrontendFallbackAnswer(text){
             const prompt = buildTronixSystemPrompt() + '\n\nUser: ' + text + '\nAnswer clearly in user language.';
@@ -4360,13 +4420,21 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
         }
         async function sendAIChat(){
             const input=document.getElementById('aiChatInput'), body=document.getElementById('aiChatBody');
-            const text=input.value.trim(); if(!text)return;
-            body.insertAdjacentHTML('beforeend', `<div class="ai-msg me">${renderTronixText(text)}</div>`);
-            tronixMessages.push({role:'user', content:text});
+            let text=input.value.trim();
+            const img = tronixAttachedImage;
+            if(!text && !img) return;
+            if(!text && img) text = 'Please analyze this photo and explain what you see. If it looks like a question/doubt, solve it step by step.';
+            const userBubble = img
+                ? `<div class="ai-msg me"><img src="${img.dataUrl}" alt="" style="max-width:200px;max-height:200px;border-radius:10px;display:block;margin-bottom:6px;">${renderTronixText(text)}</div>`
+                : `<div class="ai-msg me">${renderTronixText(text)}</div>`;
+            body.insertAdjacentHTML('beforeend', userBubble);
+            tronixMessages.push({role:'user', content: img ? ('[Photo attached] ' + text) : text});
             input.value=''; body.scrollTop=body.scrollHeight;
-            const wait=document.createElement('div'); wait.className='ai-msg bot tronix-thinking'; wait.textContent='Tronix deep thinking...'; body.appendChild(wait); body.scrollTop=body.scrollHeight;
+            const wait=document.createElement('div'); wait.className='ai-msg bot tronix-thinking'; wait.textContent= img ? 'Tronix analyzing your photo...' : 'Tronix deep thinking...'; body.appendChild(wait); body.scrollTop=body.scrollHeight;
+            const sentImage = img; // capture before clear
+            clearTronixImage();
             try {
-                const ans = await tronixAnswer(text);
+                const ans = await tronixAnswer(text, sentImage);
                 wait.classList.remove('tronix-thinking');
                 wait.innerHTML = renderTronixText(ans);
                 tronixMessages.push({role:'assistant', content:ans});
@@ -4391,24 +4459,54 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             if(k.startsWith('AIza')) return {name:'Gemini', type:'gemini', endpoint:'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', models:['gemini-1.5-flash']};
             return {name:'OpenAI', type:'openai-compatible', endpoint:'https://api.openai.com/v1/chat/completions', models:['gpt-4o-mini']};
         }
-        async function tronixAnswer(text){
+        async function tronixAnswer(text, image){
             const lower=String(text||'').toLowerCase();
-            if(lower.includes('who is owner') || lower.includes('owner kaun') || lower.includes('owner kon')) return 'The owner of Chatgram is Abhishek Singh.';
-            if(lower.includes('who is co owner') || lower.includes('co-owner') || lower.includes('co owner') || lower.includes('coowner')) { const co=coOwnerDisplayNames(); return co.length ? ('Current co-owner: '+co.join(', ')) : 'No co-owner is currently assigned.'; }
+            if(!image){
+                if(lower.includes('who is owner') || lower.includes('owner kaun') || lower.includes('owner kon')) return 'The owner of Chatgram is Abhishek Singh.';
+                if(lower.includes('who is co owner') || lower.includes('co-owner') || lower.includes('co owner') || lower.includes('coowner')) { const co=coOwnerDisplayNames(); return co.length ? ('Current co-owner: '+co.join(', ')) : 'No co-owner is currently assigned.'; }
+            }
             const key = sessionStorage.getItem('tronix_openai_key') || localStorage.getItem('tronix_openai_key') || state.tronixGlobal?.apiKey;
-            if(!key) return aiSmartReply(text) + '\n\nTip: Owner settings se Tronix API key publish ho sakti hai, ya API Key button se local API key set karo.';
+            if(!key) return (image ? 'Photo analysis needs an AI API key. ' : '') + aiSmartReply(text) + '\n\nTip: Owner settings se Tronix API key publish ho sakti hai, ya API Key button se local API key set karo (Gemini AIza... ya OpenAI/OpenRouter key vision ke liye best).';
             const provider=detectTronixProvider(key);
+            // Switch to a vision-capable model when an image is attached
+            if(image){
+                if(provider.type==='gemini') provider.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+                else if(provider.name==='OpenAI') provider.models = ['gpt-4o-mini'];
+                else if(provider.name==='OpenRouter') provider.models = ['openai/gpt-4o-mini','google/gemini-flash-1.5'];
+                else if(provider.name==='Groq') provider.models = ['llama-3.2-11b-vision-preview','llama-3.2-90b-vision-preview'];
+                else if(provider.name==='NVIDIA') provider.models = ['meta/llama-3.2-90b-vision-instruct','meta/llama-3.2-11b-vision-instruct', ...(provider.models||[])];
+            }
             if(provider.type==='gemini'){
                 const prompt = buildTronixSystemPrompt() + '\n\nUser: ' + text;
+                const parts = [{text: prompt}];
+                if(image){
+                    const b64 = String(image.dataUrl).split(',')[1] || '';
+                    parts.push({inline_data: {mime_type: image.mime || 'image/jpeg', data: b64}});
+                }
                 const res = await fetch(provider.endpoint + '?key=' + encodeURIComponent(key), {
                     method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.45, maxOutputTokens:1800}})
+                    body: JSON.stringify({contents:[{parts: parts}], generationConfig:{temperature:0.45, maxOutputTokens:1800}})
                 });
                 const data=await res.json().catch(()=>({}));
                 if(!res.ok) throw new Error(data?.error?.message || ('Gemini HTTP '+res.status));
                 return data.candidates?.[0]?.content?.parts?.map(p=>p.text).join('\n').trim() || 'Tronix did not return an answer.';
             }
-            const messages = [{role:'system', content:buildTronixSystemPrompt()}, ...tronixMessages.filter(m=>m.role!=='system')];
+            const baseMessages = [{role:'system', content:buildTronixSystemPrompt()}, ...tronixMessages.filter(m=>m.role!=='system')];
+            let messages = baseMessages;
+            if(image){
+                // Replace the last user message with a vision-format multimodal content
+                const lastUserIdx = (()=>{ for(let i=messages.length-1;i>=0;i--){ if(messages[i].role==='user') return i; } return -1; })();
+                if(lastUserIdx >= 0){
+                    messages = messages.slice();
+                    messages[lastUserIdx] = {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: text },
+                            { type: 'image_url', image_url: { url: image.dataUrl } }
+                        ]
+                    };
+                }
+            }
             let lastError = null;
             for (const model of (provider.models || [provider.model])) {
                 try {
