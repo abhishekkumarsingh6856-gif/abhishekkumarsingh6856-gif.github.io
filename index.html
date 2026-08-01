@@ -2691,7 +2691,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
         import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp, addDoc, orderBy, query, where, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp, addDoc, orderBy, query, where, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -2714,7 +2714,6 @@
         const CALLS_COLLECTION = 'chatgram_calls_v2';
         const SONGS_COLLECTION = 'chatgram_songs_v2';
         const CONFIG_COLLECTION = 'chatgram_config_v2';
-        const ADMIN_NOTIFS_COLLECTION = 'chatgram_admin_notifs_v1';
         const fbStorage = getStorage(app);
         auth.languageCode = 'en';
         const provider = new GoogleAuthProvider();
@@ -2807,11 +2806,12 @@
             return onSnapshot(doc(db, CONFIG_COLLECTION, 'treax'), snap => { if(snap.exists()) callback(snap.data()); }, err=>console.warn('Treax config sync error', err));
         };
         window.chatgramCloudSendAdminNotification = async function(notif) {
-            return await addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), {...notif, createdAtServer: serverTimestamp()});
+            await setDoc(doc(db, CONFIG_COLLECTION, 'adminNotifs'), { items: arrayUnion(notif), updatedAt: serverTimestamp() }, { merge: true });
         };
         window.chatgramCloudStartAdminNotifsSync = function(callback) {
-            const q = query(collection(db, ADMIN_NOTIFS_COLLECTION), orderBy('createdAt','asc'));
-            return onSnapshot(q, snap => callback(snap.docs.map(d=>({id:d.id, ...d.data()}))), err=>console.warn('Admin notifs sync error', err));
+            return onSnapshot(doc(db, CONFIG_COLLECTION, 'adminNotifs'), snap => {
+                callback(snap.exists() ? (snap.data().items || []) : []);
+            }, err => console.warn('Admin notifs sync error', err));
         };
 
         window.chatgramFirebaseReady = true;
@@ -3313,14 +3313,15 @@
                 if(!target) return alert('User not found. Check username or CG-ID.');
                 targetPublicId = accountId(target); targetLabel = target.username;
             }
-            const payload = {targetPublicId, targetLabel, title, body, fromName: me.username, fromPublicId: accountId(me), createdAt: Date.now()};
+            const payload = {id: 'an_'+Date.now()+'_'+Math.random().toString(36).slice(2,8), targetPublicId, targetLabel, title, body, fromName: me.username, fromPublicId: accountId(me), createdAt: Date.now()};
             try {
                 await waitForFirebaseCloud(6000);
-                if(window.chatgramCloudSendAdminNotification) await window.chatgramCloudSendAdminNotification(payload);
+                if(!window.chatgramCloudSendAdminNotification) throw new Error('Cloud not connected yet. Please wait a moment and try again.');
+                await window.chatgramCloudSendAdminNotification(payload);
                 alert('Notification sent to '+targetLabel+'.');
                 const titleInput=document.getElementById('adminNotifTitle'), bodyInput=document.getElementById('adminNotifBody'), targetInput=document.getElementById('adminNotifTarget');
                 if(titleInput) titleInput.value=''; if(bodyInput) bodyInput.value=''; if(targetInput) targetInput.value='';
-            } catch(e){ console.warn('Send admin notification failed', e); alert('Failed to send notification. Check connection.'); }
+            } catch(e){ console.warn('Send admin notification failed', e); alert('Failed to send notification: ' + (e?.message || 'Unknown error') + '\n\nIf this keeps happening, check your Firestore security rules allow write access to the "'+'chatgram_config_v2'+'" collection.'); }
         }
         function toggleAdminNotifTargetField(){
             const mode=document.querySelector('input[name="adminNotifMode"]:checked')?.value;
