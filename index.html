@@ -2714,6 +2714,7 @@
         const CALLS_COLLECTION = 'chatgram_calls_v2';
         const SONGS_COLLECTION = 'chatgram_songs_v2';
         const CONFIG_COLLECTION = 'chatgram_config_v2';
+        const ADMIN_NOTIFS_COLLECTION = 'chatgram_admin_notifs_v1';
         const fbStorage = getStorage(app);
         auth.languageCode = 'en';
         const provider = new GoogleAuthProvider();
@@ -2804,6 +2805,13 @@
         };
         window.chatgramCloudStartTreaxConfigSync = function(callback) {
             return onSnapshot(doc(db, CONFIG_COLLECTION, 'treax'), snap => { if(snap.exists()) callback(snap.data()); }, err=>console.warn('Treax config sync error', err));
+        };
+        window.chatgramCloudSendAdminNotification = async function(notif) {
+            return await addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), {...notif, createdAtServer: serverTimestamp()});
+        };
+        window.chatgramCloudStartAdminNotifsSync = function(callback) {
+            const q = query(collection(db, ADMIN_NOTIFS_COLLECTION), orderBy('createdAt','asc'));
+            return onSnapshot(q, snap => callback(snap.docs.map(d=>({id:d.id, ...d.data()}))), err=>console.warn('Admin notifs sync error', err));
         };
 
         window.chatgramFirebaseReady = true;
@@ -2896,6 +2904,8 @@
             deletedUsers: [],
             songs: [],
             largeStorageMode: false,
+            seenAdminNotifIds: [],
+            adminNotifHistory: [],
             cloudSyncEnabled: true,
             cloudinary: { cloudName: '', uploadPreset: '' },
             deviceAccounts: [],
@@ -2996,6 +3006,8 @@
             state.userStorageConsent = !!state.userStorageConsent;
             state.treaxGlobal = state.treaxGlobal || { apiKey: '', endpoint: '', model: '', publishedBy: '', updatedAt: 0 };
             state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
+            state.seenAdminNotifIds = Array.isArray(state.seenAdminNotifIds) ? state.seenAdminNotifIds : [];
+            state.adminNotifHistory = Array.isArray(state.adminNotifHistory) ? state.adminNotifHistory : [];
             Object.keys(state.threads).forEach(k => { state.threads[k] = (state.threads[k] || []).map(m => ({...m, createdAt:m.createdAt||m.id||Date.now()})); });
             state.users.forEach(u => {
                 u.id = Number(u.id) || Date.now() + Math.floor(Math.random()*9999);
@@ -3262,6 +3274,59 @@
             await waitForFirebaseCloud(6000);
             try { if(!treaxConfigUnsub && window.chatgramCloudStartTreaxConfigSync) treaxConfigUnsub = window.chatgramCloudStartTreaxConfigSync(cfg => { state.treaxGlobal = {...(state.treaxGlobal||{}), ...cfg}; saveState(); }); } catch(e){ console.warn('Treax config listen failed', e); }
         }
+        let adminNotifsUnsub=null;
+        async function startAdminNotifsSync(){
+            await waitForFirebaseCloud(6000);
+            try { if(!adminNotifsUnsub && window.chatgramCloudStartAdminNotifsSync) adminNotifsUnsub = window.chatgramCloudStartAdminNotifsSync(mergeAdminNotifs); } catch(e){ console.warn('Admin notifs listen failed', e); }
+        }
+        function mergeAdminNotifs(list){
+            if(!Array.isArray(list)) return;
+            const me=getCurrentUser(); if(!me) return;
+            const myId=accountId(me);
+            let changed=false;
+            list.forEach(n=>{
+                if(!n || !n.id) return;
+                if(state.seenAdminNotifIds.includes(n.id)) return;
+                state.seenAdminNotifIds.push(n.id);
+                const isMine = n.fromPublicId===myId;
+                if(isMine){ if(!state.adminNotifHistory.some(h=>h.id===n.id)){ state.adminNotifHistory.push(n); changed=true; } return; }
+                if(n.targetPublicId!=='all' && n.targetPublicId!==myId) return;
+                const nn={id:Date.now()+Math.random(), userId:0, avatar:'', text:`<strong>${escapeHTML(n.fromName||'Chatgram')}</strong> · ${escapeHTML(n.title||'Update')}: ${escapeHTML(n.body||'')}`, type:'system', fromName:n.fromName||'Chatgram', targetType:'', time:timeNow(), createdAt:Date.now(), read:false};
+                state.notifications.push(nn); changed=true;
+                pushLocalNotification(n.title||'Chatgram update', n.body||'', undefined);
+            });
+            if(changed){ saveState(); updateBadges(); if(state.currentPage==='notifications') renderNotifications(); if(state.currentPage==='settings') renderSettings(); }
+        }
+        async function sendAdminNotification(){
+            const me=getCurrentUser();
+            if(!isOwnerUser(me)) return alert('Only owner/co-owner can send notifications.');
+            const modeEl=document.querySelector('input[name="adminNotifMode"]:checked');
+            const mode = modeEl ? modeEl.value : 'all';
+            const title = document.getElementById('adminNotifTitle')?.value.trim() || 'Website update';
+            const body = document.getElementById('adminNotifBody')?.value.trim();
+            if(!body) return alert('Write a notification message.');
+            let targetPublicId='all', targetLabel='All users';
+            if(mode==='user'){
+                const raw=(document.getElementById('adminNotifTarget')?.value||'').trim();
+                if(!raw) return alert('Enter a username or CG-ID to target.');
+                const target = state.users.find(u=>u.username.toLowerCase()===raw.toLowerCase() || accountId(u).toLowerCase()===raw.toLowerCase());
+                if(!target) return alert('User not found. Check username or CG-ID.');
+                targetPublicId = accountId(target); targetLabel = target.username;
+            }
+            const payload = {targetPublicId, targetLabel, title, body, fromName: me.username, fromPublicId: accountId(me), createdAt: Date.now()};
+            try {
+                await waitForFirebaseCloud(6000);
+                if(window.chatgramCloudSendAdminNotification) await window.chatgramCloudSendAdminNotification(payload);
+                alert('Notification sent to '+targetLabel+'.');
+                const titleInput=document.getElementById('adminNotifTitle'), bodyInput=document.getElementById('adminNotifBody'), targetInput=document.getElementById('adminNotifTarget');
+                if(titleInput) titleInput.value=''; if(bodyInput) bodyInput.value=''; if(targetInput) targetInput.value='';
+            } catch(e){ console.warn('Send admin notification failed', e); alert('Failed to send notification. Check connection.'); }
+        }
+        function toggleAdminNotifTargetField(){
+            const mode=document.querySelector('input[name="adminNotifMode"]:checked')?.value;
+            const row=document.getElementById('adminNotifTargetRow');
+            if(row) row.style.display = mode==='user' ? 'block' : 'none';
+        }
         async function publishTreaxConfig(){
             if(!isOwnerUser()) return alert('Only owner/co-owner can publish Treax API.');
             const apiKey=document.getElementById('ownerTreaxApiKey')?.value.trim();
@@ -3509,6 +3574,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             startCloudPostsSync();
             startCloudSongsSync();
             startTreaxConfigSync();
+            startAdminNotifsSync();
             startCloudCallListener();
             setTimeout(startCloudThreadsForKnownUsers, 2500);
             syncCurrentUserToCloudSoon();
@@ -3969,6 +4035,7 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             box.innerHTML='<div class="notif-section-title">Recent</div>'+state.notifications.sort((a,b)=>b.id-a.id).map(n=>{
                 const t = n.createdAt ? formatMsgTime(n.createdAt) : escapeHTML(n.time||'Just now');
                 if(n.type==='like') return `<div class="notif-item like-notif" style="opacity:${n.read?0.86:1}"><div class="notif-heart-icon">♥</div><div class="notif-text"><strong>${escapeHTML(n.fromName||'Someone')}</strong> liked your ${escapeHTML(n.targetType||'post')}.<span class="notif-time-strong">${t}</span></div></div>`;
+                if(n.type==='system') return `<div class="notif-item like-notif" style="opacity:${n.read?0.86:1}"><div class="notif-heart-icon">📢</div><div class="notif-text">${n.text}<span class="notif-time-strong">${t}</span></div></div>`;
                 return `<div class="notif-item" style="opacity:${n.read?0.8:1}"><img src="${n.avatar}" alt=""><div class="notif-text">${n.text} <span class="notif-time">${t}</span></div></div>`;
             }).join('');
             state.notifications.forEach(n=>n.read=true); saveState(); updateBadges();
@@ -4112,7 +4179,8 @@ Note: Browser/device decides max quota. App now uses IndexedDB Blob storage and 
             const ownerTreaxPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Publish Treax API for all users</h2><p style="color:var(--text-secondary);font-size:13px;margin:8px 0 12px">Only paste API key. Treax auto-detects provider where possible; URL/model not required.</p><input id="ownerTreaxApiKey" class="settings-search-box" placeholder="API key" value="${escapeHTML(state.treaxGlobal?.apiKey||'')}"><button class="mini-btn" style="margin-top:10px" onclick="publishTreaxConfig()">Publish API for all users</button><div class="notification-status">Current: ${state.treaxGlobal?.apiKey?'Published':'Not published'} ${state.treaxGlobal?.publishedBy?'by '+escapeHTML(state.treaxGlobal.publishedBy):''}</div></div>` : '';
             const ownerStats = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2>Total users</h2><div class="analytics-grid"><div class="metric-card"><b>${state.users.length}</b><span>Active users</span></div><div class="metric-card"><b>${(state.deletedUsers||[]).length}</b><span>Past/deleted users</span></div></div><div>${state.users.map(x=>`<div class="history-item">${escapeHTML(x.username)} · ${escapeHTML(x.email||'no email')} · ${accountId(x)}</div>`).join('')}</div></div>` : '';
             const ownerPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">Owner Admin Control</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Owner and co-owner can access admin settings. Only main owner can add/remove co-owner.</p><div class="settings-row"><div style="flex:1"><b>User moderation</b><small>Enter username or CG-ID.</small><input id="vipTarget" placeholder="username or CG-000001" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setVipFromPanel(true)">Give VIP</button><button class="mini-btn secondary" onclick="setVipFromPanel(false)">Remove VIP</button><button class="mini-btn" onclick="setVerifiedFromPanel(true)">Verify</button><button class="mini-btn secondary" onclick="setVerifiedFromPanel(false)">Unverify</button><button class="danger-btn" onclick="setBanFromPanel(true)">Ban</button><button class="mini-btn secondary" onclick="setBanFromPanel(false)">Unban</button>${isRealOwner(u)?`<button class="mini-btn" onclick="setCoOwnerFromPanel(true)">Make Co-owner</button><button class="mini-btn secondary" onclick="setCoOwnerFromPanel(false)">Remove Co-owner</button>`:''}</div></div><div class="settings-row"><div style="flex:1"><b>Broadcast announcement</b><small>Shows a top banner for everyone in this local app.</small><input id="announcementInput" value="${escapeHTML(state.announcement||'')}" placeholder="Write announcement..." style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div><div class="admin-actions"><button class="mini-btn" onclick="setAnnouncementFromPanel()">Publish</button><button class="mini-btn secondary" onclick="clearAnnouncement()">Clear</button></div></div><div id="vipUsersList" style="font-size:13px;color:var(--text-secondary);margin-top:10px">${state.users.filter(x=>x.isCoOwner||x.isVip||x.isVerified||x.isBanned).map(x=>`${escapeHTML(x.username)} ${vipBadge(x)}`).join(' · ') || 'No special users yet.'}</div></div>` : '';
-            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerMusicPanel}${ownerTreaxPanel}${ownerStats}${ownerPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
+            const ownerNotifyPanel = isOwnerUser(u) ? `<div class="settings-card owner-panel"><h2 style="margin-bottom:10px">Send Notification</h2><p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">Notify users about website updates, maintenance, new features etc. Send to everyone at once, or target one person.</p><div class="settings-row"><div style="flex:1"><b>Send to</b><div style="margin-top:10px;display:flex;gap:16px;font-size:14px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="adminNotifMode" value="all" checked onchange="toggleAdminNotifTargetField()"> All users</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="adminNotifMode" value="user" onchange="toggleAdminNotifTargetField()"> Specific user</label></div><div id="adminNotifTargetRow" style="display:none;margin-top:10px"><input id="adminNotifTarget" placeholder="username or CG-000001" style="padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div></div></div><div class="settings-row"><div style="flex:1"><b>Title</b><input id="adminNotifTitle" placeholder="e.g. Website update" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%"></div></div><div class="settings-row"><div style="flex:1"><b>Message</b><textarea id="adminNotifBody" placeholder="What's new, what changed, downtime notice etc..." rows="3" style="margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);width:100%;font-family:inherit;resize:vertical"></textarea></div></div><div class="admin-actions"><button class="mini-btn" onclick="sendAdminNotification()">Send Notification</button></div>${state.adminNotifHistory.length?`<div style="font-size:12px;color:var(--text-secondary);margin-top:14px"><b style="display:block;margin-bottom:6px;color:var(--text-primary)">Recently sent</b>${[...state.adminNotifHistory].sort((a,b)=>b.createdAt-a.createdAt).slice(0,8).map(h=>`<div class="history-item">${escapeHTML(h.targetLabel||'All users')} · ${escapeHTML(h.title||'')} — ${escapeHTML(h.body||'')}</div>`).join('')}</div>`:''}</div>` : '';
+            box.innerHTML=`<div class="page-header"><h1>Settings</h1></div>${settingsSearch}${analyticsMini}${savedPanel}${cloudPanel}${contactPanel}${historyPanel}${ownerMusicPanel}${ownerTreaxPanel}${ownerStats}${ownerPanel}${ownerNotifyPanel}<div class="settings-card"><div class="settings-row"><div><b>Account</b><small>${escapeHTML(u.username)} ${vipBadge(u)} · ID: ${accountId(u)}</small></div><button class="mini-btn" onclick="editProfile()">Edit</button></div><div class="settings-row"><div><b>Upload Browser</b><small>Post/Reel/Story upload is enabled. Media saves locally first and syncs metadata in real-time.</small></div><button class="mini-btn secondary" onclick="openCreateModal('reel')">Test Video Upload</button></div><div class="settings-row"><div><b>Notifications</b><small>Allow browser notifications for new messages and alerts.</small><div class="notification-status">Status: ${('Notification' in window) ? Notification.permission : 'not supported'}</div></div><button class="mini-btn secondary" onclick="requestNotificationPermission()">Enable Notifications</button></div><div class="settings-row"><div><b>Privacy</b><small>${state.privacy==='public'?'Public: everyone in this local app can discover your account/posts.':'Private: only followers see posts/stories in feed.'}</small></div><button class="mini-btn secondary" onclick="togglePrivacy()">${state.privacy==='public'?'Make private':'Make public'}</button></div><div class="settings-row"><div><b>Password</b><small>Change your local account password.</small></div><button class="mini-btn secondary" onclick="changePassword()">Change</button></div><div class="settings-row"><div><b>Logout</b><small>Sign out from this device.</small></div><button class="mini-btn secondary" onclick="handleLogout()">Logout</button></div><div class="settings-row"><div><b>Delete this account</b><small>Removes your local account, posts, reels and stories.</small></div><button class="danger-btn" onclick="deleteAccount()">Delete</button></div></div>`;
         }
         async function showStorageInfo(){ const info=await getStorageInfo(); const text=document.getElementById('storageInfoText'), bar=document.getElementById('storageMeterBar'); if(text) text.textContent=`Used ${gb(info.usage)} of ${gb(info.quota)} (${info.percent}%)`; if(bar) bar.style.width=info.percent+'%'; }
         function safeStoragePath(path, file){
